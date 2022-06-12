@@ -1,1 +1,1 @@
-## VeriBlox Privacy Policy
+# VeriBlox Privacy Policy
