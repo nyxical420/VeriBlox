@@ -1,1 +1,1 @@
-## VeriBlox Terms of Service
+# VeriBlox Terms of Service
