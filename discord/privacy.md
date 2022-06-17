@@ -13,8 +13,8 @@ We uses third-party services to gather information of users outside Discord. The
 
 - User's ROBLOX ID;
 - User's ROBLOX Name;
-- User's ROBLOX Display Name.
-- User's ROBLOX Profile Description
+- User's ROBLOX Display Name;
+- User's ROBLOX Profile Description.
 
 As for inside Discord itself, we will also gather information including:
 
@@ -34,9 +34,9 @@ We only store less of the data we had collected to ensure the running of the app
 
 - User's ROBLOX ID;
 - User's ROBLOX Name;
-- User's ROBLOX Display Name.
+- User's ROBLOX Display Name;
 - User's Discord ID;
-- Discord Guild's ID;
+- Discord Guild's ID.
 
 We will take great care on the data stored from the application and will be responsible for any leaks and/or other issues that can cause problems with the data getting corrupted or missing. The data may keep as long until we don't need it anymore or if the user decides to remove it.
 
