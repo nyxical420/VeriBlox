@@ -502,7 +502,6 @@ async def on_command_error(interaction: Interaction, error: app_commands.AppComm
 try:
     #from webserver import keep_alive
     #keep_alive()
-    #bot.run("OTE4MDQzNTQ0NjA0Nzg2Njk4.G9z6ki.-bQ1rGQf3VorOVRug2Dn_rw3SYpUI7PZQIjvVI")
     bot.run(environ["token"])
 except HTTPException:
     print("Re-run Bot")
