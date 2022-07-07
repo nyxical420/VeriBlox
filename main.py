@@ -136,25 +136,16 @@ class persistentVerify(View):
                             if interaction.user.id == interaction.guild.owner_id:
                                 pass
                             
-                            else:
+                            try:
                                 if rbusername == rbdispname:
-                                    try:
-                                        await interaction.user.edit(nick=f"{rbusername}")
-                                    except:
-                                        pass
+                                    await interaction.user.edit(nick=rbusername)
                                 else:
-                                    u = f"{rbdispname} - @{rbusername}"
-                                    
-                                    if len(u) >= 31:
-                                        try:
-                                            await interaction.user.edit(nick=f"{rbusername}")
-                                        except:
-                                            pass
+                                    if len(rbusername + rbdispname) >= 32:
+                                        await interaction.user.edit(nick=rbusername)
                                     else:
-                                        try:
-                                            await interaction.user.edit(nick=f"{rbdispname} - @{rbusername}")
-                                        except:
-                                            pass
+                                        await interaction.user.edit(nick=f"{rbdispname} - @{rbusername}")
+                            except PermissionError:
+                                pass
 
                             self.vs[self.discordid]["verified"] = True
                             self.vs[self.discordid]["displayname"] = rbdispname
@@ -216,7 +207,7 @@ class PersistentViewBot(commands.Bot):
         async def activityLoop():
             while True:
                 day = date.today().strftime("%d")
-                await bot.change_presence(activity=Activity(type=ActivityType.watching, name=f"/help | {len(bot.guilds):,} Servers | {day} / 31"))
+                await bot.change_presence(activity=Activity(type=ActivityType.watching, name=f"{len(bot.guilds):,} Servers | /help"))
                 await sleep(30)
         
         async def missingDataDump():
@@ -471,8 +462,6 @@ async def setup(interaction: Interaction, verifiedrole : Role):
     await category.set_permissions(guild.default_role, overwrite=overwritedefault)
     await interaction.response.send_message(content="Verification category and channel created! to change the verified role, use the command ``/verifiedrole RoleNameHere``.\nMake sure the verified role is below my role to fully verify a user!", ephemeral=True)
 
-
-
 @bot.tree.error
 async def on_command_error(interaction: Interaction, error: app_commands.AppCommandError):
     if isinstance(error, app_commands.CommandOnCooldown):
@@ -500,9 +489,8 @@ async def on_command_error(interaction: Interaction, error: app_commands.AppComm
     raise error
 
 try:
-    #from webserver import keep_alive
-    #keep_alive()
-    bot.run(environ["token"])
+    # very unsafe, ill try figuring out how to setup venv on linux
+    bot.run(str(open("token.txt", "r").read()))
 except HTTPException:
     print("Re-run Bot")
     system("kill 1")
