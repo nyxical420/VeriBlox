@@ -3,12 +3,14 @@ from discord.ui import Button, View, Modal, TextInput, button
 from datetime import datetime, date
 from time import process_time, time
 from discord.ext import commands
-from os import environ, system
+from dotenv import load_dotenv
 from json import load, dump
 from asyncio import sleep
 from random import choice
 from requests import get
+from os import getenv
 
+load_dotenv()
 start = process_time()
 
 class persistentVerify(View):
@@ -488,9 +490,5 @@ async def on_command_error(interaction: Interaction, error: app_commands.AppComm
 
     raise error
 
-try:
-    # very unsafe, ill try figuring out how to setup venv on linux
-    bot.run(str(open("token.txt", "r").read()))
-except HTTPException:
-    print("Re-run Bot")
-    system("kill 1")
+token = getenv("token")
+bot.run(token)
