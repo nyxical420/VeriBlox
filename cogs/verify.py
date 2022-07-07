@@ -14,7 +14,7 @@ class verify(commands.Cog):
 
     @app_commands.command(name="verify", description="Verifies your Discord Account with your Roblox Account on VeriBlox")
     async def verify(self, interaction : Interaction):
-        self.refreshData(userid=interaction.user.id)
+        refreshUserData(userid=interaction.user.id)
 
         try:
             str(interaction.guild.id)
@@ -22,7 +22,7 @@ class verify(commands.Cog):
             embed = Embed(description="**You can't run this command on DMs!**")
             return await interaction.followup.send(embed=embed)
 
-        data = self.vs_Read_Data()
+        data = readUserData()
         self.discordid = str(interaction.user.id)
 
         class verification(Modal, title="VeriBlox Verification"):
@@ -134,23 +134,17 @@ class verify(commands.Cog):
 
                             if interaction.user.id == interaction.guild.owner_id:
                                 pass
-                            else:
+                            
+                            try:
                                 if rbusername == rbdispname:
-                                    try:
-                                        await interaction.user.edit(nick=f"{rbusername}")
-                                    except:
-                                        pass
+                                    await interaction.user.edit(nick=rbusername)
                                 else:
-                                    try:
-                                        try:
-                                            await interaction.user.edit(nick=f"{rbdispname} - @{rbusername}")
-                                        except:
-                                            pass
-                                    except:
-                                        try:
-                                            await interaction.user.edit(nick=f"{rbusername}")
-                                        except:
-                                            pass
+                                    if len(rbusername + rbdispname) >= 32:
+                                        await interaction.user.edit(nick=rbusername)
+                                    else:
+                                        await interaction.user.edit(nick=f"{rbdispname} - @{rbusername}")
+                            except PermissionError:
+                                pass
 
                             data[self.discordid]["verified"] = True
                             data[self.discordid]["displayname"] = rbdispname
