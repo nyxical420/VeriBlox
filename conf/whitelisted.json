@@ -1,0 +1,13 @@
+{
+    "whitelisted": ["tenor.com", "cdn.discordapp.com", "github.com", "devforum.roblox.com", "amazon.com", "www.amazon.com", "medal.tv", "reddit.com", "www.reddit.com", "twitter.com", "instagram.com"],
+    "robloxAPIs": ["abtesting", "accountinformation", "accountsettings", "adconfiguration", "ads", 
+    "api", "assetdelivery", "auth", "avatar", "badges", "billing", "catalog",
+    "cdnproviders", "chat", "chatmoderation", "clientsettings", "clientsettingscdn",
+    "contacts", "contentstore", "develop", "discussions", "economy", "economycreatorstats",
+    "engagementpayouts", "followings", "friends", "gameinternationalization", "gamejoin",
+    "gamepersistence", "games", "gamepasses", "groups", "groupsmoderation", "inventory",
+    "itemconfiguration", "locale", "localizationtables", "metrics", "midas", "notifications",
+    "points", "premiumfeatures", "presence", "privatemessages", "publish", "punishments",
+    "search", "share", "textfilter", "thumbnails", "thumbnailsresizer", "trades", "translationroles",
+    "translations", "twostepverification", "users", "usermoderation", "voice"]
+}
