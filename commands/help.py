@@ -26,11 +26,12 @@ class helpmenu(commands.Cog):
         cmds = discord.Embed(title="VeriBlox Commands", color=0x2F3136)
         cmds.add_field(name="User Commands", value="`/verify` - Starts Verification from VeriBlox\n"
                                                    "`/whois` - Shows the Member's Roblox Profile\n"
-                                                   "`/search username` - Searches for a Roblox User by Name\n"
-                                                   "`/search id` - Searches for a Roblox User by ID\n"
+                                                   "`/search user` - Searches for a Roblox User by Name\n"
+                                                   "`/search userid` - Searches for a Roblox User by ID\n"
+                                                   "`/search game` - Searches for a Roblox Game by Name\n"
                                                    "`/avatar` - Shows the Member's Roblox Avatar\n"
                                                    "`/invite` - Gives an Invite Link for VeriBlox\n"
-                                                   "`/deletedata` - Deletes your Data from VeriBlox", inline=False)
+                                                   "`/data` - Shows a Preview of your current VeriBlox Data", inline=False)
         
         cmds.add_field(name="Tools", value="`/devex robux` - Converts Robux to a Certain Type of Currency\n"
                                            "`/devex currency` - Converts USD to Robux\n"
@@ -47,9 +48,12 @@ class helpmenu(commands.Cog):
 
         cmds.add_field(name="Server Configuration", value="`/config accagereq` - Changes the Age Requirement for Roblox Accounts\n"
                                                           "`/config verifiedrole` - Changes the Verified Role from this Server\n"
+                                                          "`/config premiumrole` - Changes the Premium Role from this Server\n"
+                                                          "`/config premiumonly` - Enables or Disables Premium-Only Verification\n"
                                                           "`/config welcomemessage` - Changes the Welcome Message from this Server\n"
                                                           "`/config autoverify` - Enables or Disables Auto-Verification", inline=False)
 
+        cmds.add_field(name="VeriBlox Server", value="If you want to hear new Updates from **VeriBlox**. or if you need help with something, you can [Join my Discord Server](https://discord.gg/EHNtECJRKA)!")
 
         await interaction.response.send_message(embed=cmds)
 

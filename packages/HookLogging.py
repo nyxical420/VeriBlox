@@ -1,9 +1,9 @@
 # HookLogging
-# VeriBlox Package for Logging through Discord
+# VeriBlox Package for Sending VeriBlox Logs through Discord
 
+from os import getenv
 from httpx import post
 from dotenv import load_dotenv
-from os import getenv
 
 load_dotenv()
 

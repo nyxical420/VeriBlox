@@ -1,5 +1,5 @@
 {
-    "whitelisted": ["tenor.com", "cdn.discordapp.com", "github.com", "devforum.roblox.com", "amazon.com", "www.amazon.com", "medal.tv", "reddit.com", "www.reddit.com", "twitter.com", "instagram.com"],
+    "whitelisted": ["tenor.com", "cdn.discordapp.com", "github.com", "devforum.roblox.com", "amazon.com", "www.amazon.com", "medal.tv", "reddit.com", "www.reddit.com", "twitter.com", "instagram.com", "status.roblox.com"],
     "robloxAPIs": ["abtesting", "accountinformation", "accountsettings", "adconfiguration", "ads", 
     "api", "assetdelivery", "auth", "avatar", "badges", "billing", "catalog",
     "cdnproviders", "chat", "chatmoderation", "clientsettings", "clientsettingscdn",

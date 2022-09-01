@@ -1,12 +1,12 @@
 import discord
 import discord.ext.commands as commands
 
-from requests import get
+from httpx import get
 from json import load
 
 from packages.Logging import log
 from packages.HookLogging import sendLog
-from packages.DataTools import readGuildData
+from packages.DataEdit import getGuildData
 
 class malblock(commands.Cog):
     def __init__(self, bot):
@@ -18,18 +18,18 @@ class malblock(commands.Cog):
             self.APIs = data["robloxAPIs"]
 
     @commands.Cog.listener()
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         if message.author == self.bot.user:
             return
 
         if message.author.bot: 
             return
         
-        data = await readGuildData()
-        try:
-            data[str(message.guild.id)]
-        except:
-            return
+        try: data = getGuildData(message.guild.id)
+        except: return
+        
+        try: data[str(message.guild.id)]
+        except: return
         
         if data[str(message.guild.id)]["malblock"] == True:
             s = str(message.content).lower().split()
@@ -40,8 +40,7 @@ class malblock(commands.Cog):
                     except:
                         return
                     
-                    malicious_hasperm = discord.Embed(title=":warning: Malicious Link Detected", description=f"Looks like {message.author.mention} **({message.author.id})** sent an **Malicious Roblox Link** which could get your roblox account vunerable.\n\n**Link:** ||[{s[x]}](https://www.youtube.com/watch?v=bzXzGMbdQfY)|| (Status Code: {site.status_code})\n**Note: This link won't direct you to the malicious site to avoid users visiting the site.**")
-                    malicious_noperm = discord.Embed(title=":warning: Malicious Link Detected", description=f"Looks like {message.author.mention} **({message.author.id})** sent an **Malicious Roblox Link** which could get your roblox account vunerable.\n\nCould not delete the message since i do not have the **Manage Messages** permission. Please enable this from my permissions!")
+                    malicious_hasperm = discord.Embed(title="⚠️ Malicious Link Detected", description=f"Looks like {message.author.mention} **({message.author.id})** sent an **Malicious Roblox Link** which could get your roblox account vunerable.\n\n**Link:** ||[{s[x]}](https://www.youtube.com/watch?v=bzXzGMbdQfY)|| (Status Code: {site.status_code})\n**Note: This link won't direct you to the malicious site to avoid users visiting the site.**")
                     
                     # Roblox API Check
                     for y in range(len(self.APIs)):
@@ -60,9 +59,8 @@ class malblock(commands.Cog):
                             log(f"Link ({s[x]}) has been detected as a Malicious Link! Deleted.")
                             sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Deleted.")
                         except:
-                            await message.channel.send(embed=malicious_noperm)
-                            log(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted.")
-                            sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted.")
+                            log(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted. (Missing Permission)")
+                            sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted. (Missing Permission)")
                         return
                     else:
                         pass
@@ -74,9 +72,8 @@ class malblock(commands.Cog):
                             log(f"Link ({s[x]}) has been detected as a Malicious Link! Deleted.")
                             sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Deleted.")
                         except:
-                            await message.channel.send(embed=malicious_noperm)
-                            log(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted.")
-                            sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted.")
+                            log(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted. (Missing Permission)")
+                            sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted. (Missing Permission)")
                         return
                     else:
                         pass
@@ -88,9 +85,8 @@ class malblock(commands.Cog):
                             log(f"Link ({s[x]}) has been detected as a Malicious Link! Deleted.")
                             sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Deleted.")
                         except:
-                            await message.channel.send(embed=malicious_noperm)
-                            log(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted.")
-                            sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted.")
+                            log(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted. (Missing Permission)")
+                            sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted. (Missing Permission)")
                         return
                     else:
                         pass
@@ -102,9 +98,8 @@ class malblock(commands.Cog):
                             log(f"Link ({s[x]}) has been detected as a Malicious Link! Deleted.")
                             sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Deleted.")
                         except:
-                            await message.channel.send(embed=malicious_noperm)
-                            log(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted.")
-                            sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted.")
+                            log(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted. (Missing Permission)")
+                            sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted. (Missing Permission)")
                         return
                     else:
                         pass
@@ -133,9 +128,8 @@ class malblock(commands.Cog):
                             log(f"Link ({s[x]}) has been detected as a Malicious Link! Deleted.")
                             sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Deleted.")
                         except:
-                            await message.channel.send(embed=malicious_noperm)
-                            log(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted.")
-                            sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted.")
+                            log(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted. (Missing Permission)")
+                            sendLog(f"Link ({s[x]}) has been detected as a Malicious Link! Not Deleted. (Missing Permission)")
                         return
 
 async def setup(bot) -> None:

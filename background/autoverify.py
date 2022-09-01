@@ -4,25 +4,23 @@ import discord.ext.commands as commands
 from packages.Logging import log
 from packages.vCodeGen import gen
 from datetime import datetime, time
-from packages.RobloxAPI import getInfo
 from packages.HookLogging import sendLog
-from packages.DataTools import readUserData, readGuildData, appendUserData
+from packages.RobloxAPI import getInfo, getMembership
+from packages.DataEdit import getUserData, getUserList, getGuildData, editUserData
 
 class autoverify(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         
     @commands.Cog.listener()
-    async def on_member_join(self, member):
-        data = await readUserData()
+    async def on_member_join(self, member: discord.Member):
+        if member.id in getUserList():
+            robloxUser = getInfo(int(getUserData[1]))
+            userID = member.id
+            guildID = member.guild.id
+            guildData = getGuildData(guildID)
 
-        if str(member.id) in data:
-            robloxUser = getInfo(int(data[str(member.id)]["robloxid"]))
-            userID = str(member.id)
-            guildID = str(member.guild.id)
-            vs, gs = await readUserData(), await readGuildData()
-
-            if gs[guildID]["auto"] == False:
+            if guildData[6] == 0:
                 return await member.send(f"The server you joined, **{member.guild.name}** has VeriBlox Auto-Verification turned off. Please verify manually!")
 
             try:
@@ -33,12 +31,23 @@ class autoverify(commands.Cog):
             except:
                 creationDate = datetime.fromisoformat(robloxUser["created"].split('.')[0]).timestamp()
 
-            if gs[guildID]["agereq"] != 0:
-                if time() - creationDate < gs[guildID]["agereq"]:
+            if guildData[5] != 0:
+                if time() - creationDate < guildData[5]:
                     return await member.send(content="**🚫 | This Roblox Account is not Elegible to be in this server. Please use another Roblox Account that's older than this Roblox Account!**")
 
+            if guildData[7] != 0:
+                if getMembership(robloxUser):
+                    if guildData[8] != 0:
+                        try: role = discord.utils.get(member.guild.roles, id=guildData[8])
+                        except: pass
+                        
+                        try: await member.add_roles(role)
+                        except: pass
+                else:
+                    return await member.send(content=f"**🚫 | You are required to have a Roblox Premium Membership to join {member.guild.name}!**")
+
             try:
-                role = discord.utils.get(member.guild.roles, id=gs[guildID]["verifiedrole"])
+                role = discord.utils.get(member.guild.roles, id=guildData[1])
             except:
                 return await member.send(content="**🚫 | There was an Error while finding the Verified Role in this server.**")
 
@@ -64,20 +73,19 @@ class autoverify(commands.Cog):
                             await member.edit(nick=f"{robloxDisplayName} - @{robloxUserName}")
                 except: pass
 
-                vs[userID]["verified"] = True
-                vs[userID]["displayname"] = robloxDisplayName
-                vs[userID]["verifykey"] = gen()
-                await appendUserData(vs)
+                editUserData(userID, '"isVerified"', '"True"')
+                editUserData(userID, '"RobloxID"', f'{robloxUser["id"]}')
+                editUserData(userID, '"VerifyCode"', f'"{gen()}"')
 
-                if gs[guildID]["welcomemessage"] != "":
-                    await member.send(gs[guildID]["welcomemessage"])
+                if guildData[2] != "":
+                    await member.send(f"Message from **{member.guild.name}**\n" + guildData[2])
 
-                if member.id == member.guild.owner_id:
-                    embed = discord.Embed(description=f"Successfully Verified as {robloxUserName} ({robloxDisplayName})**!\nSince your the **Server Owner**, I am unable to edit your nickname since this is a restriction by **Discord**. This will still work to server members.")
-                    await member.send(embed=embed)
+                if member.id == member.guild.owner.id:
+                    embed = discord.Embed(description=f"Successfully Verified as **{robloxUserName} ({robloxDisplayName})**!\nSince your the **Server Owner**, I am unable to edit your nickname since this is a restriction by **Discord**. This will still work to server members.")
+                    await member.send(content=None, embed=embed, view=None)
                 else:
                     embed = discord.Embed(description=f"Successfully Verified as **{robloxUserName} ({robloxDisplayName})**!")
-                    await member.send(embed=embed)
+                    await member.send(content=None, embed=embed, view=None)
             
             log(f"Automatically verified {member} to VeriBlox!")
             sendLog(f"Automatically verified {member} to VeriBlox!")

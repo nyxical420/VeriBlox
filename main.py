@@ -3,24 +3,30 @@ import discord.ui as ui
 import discord.ext.commands as commands
 from discord.app_commands import CommandTree
 
-import traceback
 import aiofiles
+import traceback
 from os import getenv
 from asyncio import sleep
+from os.path import getsize
 from json import loads, dumps
 from dotenv import load_dotenv
 from datetime import datetime, date, time
 
-from packages.DataTools import ratelimitUser, readUserData, readGuildData, appendUserData, appendGuildData, getrtTime, refreshUserData
-from packages.RobloxAPI import getInfo
+from packages.DataEdit import *
 from packages.Logging import log
 from packages.vCodeGen import gen
+from packages.RateLimitTool import *
 from packages.HookLogging import sendLog
-
+from packages.RobloxAPI import getInfo, getMembership
 load_dotenv("./conf/.env")
 
 users = {}
-apicmds = ["whois", "username", "id", "avatar"]
+
+# Testing Toggle for Testing Veriblox
+testing = True
+
+if testing == True:
+    log("VeriBlox is Running on Test Mode!")
 
 class VeriBloxVerification(ui.View):
     def __init__(self):
@@ -28,10 +34,9 @@ class VeriBloxVerification(ui.View):
 
     @ui.button(label='Verify', style=discord.ButtonStyle.green, custom_id="persistent_view:verification")
     async def verification(self, interaction: discord.Interaction, button: ui.Button):
-        vs, gs = await readUserData(), await readGuildData()
         class verificationModal(ui.Modal, title="VeriBlox Verification"):
-            userID = str(interaction.user.id)
-            guildID = str(interaction.guild.id)
+            userID = interaction.user.id
+            guildID = interaction.guild.id
             userName = ui.TextInput(label="Roblox Username", style=discord.TextStyle.short, min_length=3, max_length=20)
 
             async def on_submit(self, interaction: discord.Interaction):
@@ -49,29 +54,28 @@ class VeriBloxVerification(ui.View):
                 robloxUser = getInfo(robloxUser["id"])
                 robloxID = robloxUser["id"]
 
+                if getGuildData(self.guildID)[7] != 0:
+                    if not getMembership(robloxUser):
+                        return await interaction.followup.send(content=f"**🚫 | You are required to have a Roblox Premium Membership to join {interaction.guild.name}!**")
+
                 if robloxUser["banned"] == True:
                     return await interaction.followup.send(content=f"**🚫 | This Roblox Account appears to be banned.**")
 
                 try:
-                    if robloxID in gs[self.guildID]["bannedIds"]:
+                    if robloxID in getGuildData(self.guildID)[2]:
                         return await interaction.followup.send(content="**🚫 | This Roblox Account appears to be banned from this server.**")
                 except:
                     pass
 
-                if not self.userID in vs:
-                    vs[self.userID] = {}
-                    vs[self.userID]["username"] = robloxUser["username"]
-                    vs[self.userID]["displayname"] = robloxUser["displayname"]
-                    vs[self.userID]["robloxid"] = robloxUser["id"]
-                    vs[self.userID]["verifyCode"] = gen()
-                    vs[self.userID]["verified"] = False
-                    vs[self.userID]["expiredAfter"] = 60
-                    await appendUserData(vs)
+                if not self.userID in getUserList():
+                    addUserData(self.userID)
+                    editUserData(self.userID, '"RobloxID"', f'{robloxUser["id"]}')
+                    editUserData(self.userID, '"VerifyCode"', f'"{gen()}"')
 
                 async def getVerificationCode(interaction: discord.Interaction):
-                    vs = await readUserData()
+                    vs = getUserData(self.userID)
                     class verificationCode(ui.Modal, title="VeriBlox Verification Code"):
-                        robloxVerificationCode = ui.TextInput(label="Verification Code", style=discord.TextStyle.long, default=vs[self.userID]["verifyCode"])
+                        robloxVerificationCode = ui.TextInput(label="Verification Code", style=discord.TextStyle.long, default=vs[2])
 
                         async def on_submit(self, interaction: discord.Interaction):
                             await interaction.response.defer()
@@ -79,9 +83,7 @@ class VeriBloxVerification(ui.View):
                     await interaction.response.send_modal(verificationCode())
 
                 async def regenVerificationCode(interaction: discord.Interaction):
-                    vs = await readUserData()
-                    vs[self.userID]["verifyCode"] = gen()
-                    appendUserData(vs)
+                    editUserData(self.userID, '"VerifyCode"', f'"{gen()}"')
                     genCode.label = "Regenerate Code"
                     genCode.style = discord.ButtonStyle.red
                     genCode.disabled = True
@@ -89,12 +91,13 @@ class VeriBloxVerification(ui.View):
                     await sleep(30)
                     genCode.style = discord.ButtonStyle.grey
                     genCode.disabled = False
-                    await interaction.edit_original_message(view=view)
+                    await interaction.edit_original_response(view=view)
 
                 async def verifyUser(interaction: discord.Interaction):
-                    vs = await readUserData()
+                    vs = getUserData(self.userID)
+                    gs = getGuildData(self.guildID)
                     robloxUser = getInfo(str(self.userName), True)
-                    if vs[self.userID]["verifyCode"] == robloxUser["description"]:
+                    if vs[2] == robloxUser["description"]:
                         try:
                             try:
                                 creationDate = datetime.fromisoformat(robloxUser["created"][:-1] + "+00:00").timestamp()
@@ -103,19 +106,28 @@ class VeriBloxVerification(ui.View):
                         except:
                             creationDate = datetime.fromisoformat(robloxUser["created"].split('.')[0]).timestamp()
 
-                        if gs[self.guildID]["agereq"] != 0:
-                            if time() - creationDate < gs[self.guildID]["agereq"]:
+                        if gs[5] != 0:
+                            if round(time.time()) - creationDate < gs[5]:
                                 return await interaction.response.send_message(content="**🚫 | This Roblox Account is not Elegible to be in this server. Please use another Roblox Account that's older than this Roblox Account!**")
+
+                        if gs[7] != 0:
+                            if getMembership(robloxUser):
+                                if gs[8] != 0:
+                                    try: role = discord.utils.get(interaction.guild.roles, id=gs[8])
+                                    except: pass
+
+                                    try: await interaction.user.add_roles(role)
+                                    except: pass
 
                         try:
                             role = discord.utils.get(interaction.guild.roles, id=gs[self.guildID]["verifiedrole"])
                         except:
-                            return await interaction.response.send_message(content="**🚫 | There was an Error while finding the Verified Role in this server.**")
+                            return await interaction.response.send_message(content="**🚫 | There was an Error while finding the Verified Role in this server.**", ephemeral=True)
 
                         try:
                             await interaction.user.add_roles(role)
                         except:
-                            return await interaction.response.send_message(content="**🚫 | I couldn't give you the Verified Role since the role is higher than my Role Position. or i don't have the proper permission to give you one.**")
+                            return await interaction.response.send_message(content="**🚫 | I couldn't give you the Verified Role since the role is higher than my Role Position. or i don't have the proper permission to give you one.**", ephemeral=True)
 
                         if interaction.guild.me.guild_permissions.manage_nicknames:
                             robloxUserName = robloxUser["username"]
@@ -134,14 +146,11 @@ class VeriBloxVerification(ui.View):
                                         await interaction.user.edit(nick=f"{robloxDisplayName} - @{robloxUserName}")
                             except: pass
 
-                            vs = await readUserData()
-                            vs[self.userID]["verified"] = True
-                            vs[self.userID]["robloxid"] = robloxUser["id"]
-                            vs[self.userID]["verifyCode"] = gen()
-                            appendUserData(vs)
+                            editUserData(self.userID, '"isVerified"', '"True"')
+                            editUserData(self.userID, '"VerifyCode"', f'"{gen()}"')
 
-                            if gs[self.guildID]["welcomemessage"] != "":
-                                await interaction.user.send(f"Message from **{interaction.guild.name}**\n" + gs[self.guildID]["welcomemessage"])
+                            if gs[2] != "":
+                                await interaction.user.send(f"Message from **{interaction.guild.name}**\n" + gs[2])
 
                             if interaction.user.id == interaction.guild.owner_id:
                                 embed = discord.Embed(description=f"Successfully Verified as **{robloxUserName} ({robloxDisplayName})**!\nSince your the **Server Owner**, I am unable to edit your nickname since this is a restriction by **Discord**. This will still work to server members.")
@@ -153,6 +162,7 @@ class VeriBloxVerification(ui.View):
                     else:
                         return await interaction.response.send_message(content="**🚫 | Looks like you havent pasted the code in your Roblox Description. Please paste it and try again!**", ephemeral=True)
 
+                addUserData(interaction.user.id)
                 getCode.callback = getVerificationCode
                 genCode.callback = regenVerificationCode
                 verify.callback = verifyUser
@@ -167,7 +177,7 @@ class VeriBloxVerification(ui.View):
 
 class vbTree(CommandTree):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        try: await refreshUserData(str(interaction.user.id))
+        try: editUserData(interaction.user.id, '"dataExpiration"', '60')
         except: pass
 
         async with aiofiles.open(r"data/ratelimited.json", "r") as f:
@@ -176,25 +186,24 @@ class vbTree(CommandTree):
         if not str(interaction.user.id) in users:
             users[str(interaction.user.id)] = 0
 
-        if users[str(interaction.user.id)] >= 7:
+        if users[str(interaction.user.id)] >= 11:
             if str(interaction.user.id) in users:
-                ratelimitUser(str(interaction.user.id), round(datetime.now().timestamp()) + 1800)
+                await ratelimitUser(str(interaction.user.id), round(datetime.now().timestamp()) + 1800)
                 del users[str(interaction.user.id)]
                 sendLog(f"Ratelimited user: {interaction.user} ({interaction.user.id})")
 
-        if interaction.command.name in apicmds:
-            async with aiofiles.open(r"data/ratelimited.json", "r") as f:
-                data = loads(await f.read())
+        async with aiofiles.open(r"data/ratelimited.json", "r") as f:
+            data = loads(await f.read())
 
-            if not str(interaction.user.id) in data:
-                users[str(interaction.user.id)] += 1
+        if not str(interaction.user.id) in data:
+            users[str(interaction.user.id)] += 1
 
-            if str(interaction.user.id) in blacklist:
-                log(interaction.command.name)
-                time = getrtTime(str(interaction.user.id))
-                embed = discord.Embed(title="VeriBlox Ratelimit", description=f"You are being ratelimited from using VeriBlox Commands that uses the Roblox API!\nYou can run commands again <t:{time}:R>", color=0x2F3136)
-                await interaction.response.send_message(embed=embed)
-                return False
+        if str(interaction.user.id) in blacklist:
+            log(interaction.command.name)
+            time = getrtTime(str(interaction.user.id))
+            embed = discord.Embed(title="VeriBlox Ratelimit", description=f"You have been Ratelimited from using VeriBlox Commands to prevent abuse.\nYou can run commands again <t:{time}:R>", color=0x2F3136)
+            await interaction.response.send_message(embed=embed)
+            return False
         
         return True
 
@@ -207,6 +216,7 @@ class VeriBlox(commands.Bot):
 
     async def setup_hook(self) -> None:
         self.add_view(VeriBloxVerification())
+        await bot.load_extension("commands.context")
         await bot.load_extension("commands.help")
         await bot.load_extension("commands.server")
         await bot.load_extension("commands.user")
@@ -233,14 +243,36 @@ class VeriBlox(commands.Bot):
             
             if msg.startswith(f"<@{bot.user.id}>"):
                 try:
+                    if msg.split()[1] == "load":
+                        if message.author.id == 583200866631155714:
+                            try:
+                                await bot.unload_extension(f"{msg.split()[2]}")
+                                log(f"Cog {msg.split()[2]} loaded!")
+                                await message.channel.send(content=f"Cog {msg.split()[2]} loaded!")
+                            except:
+                                log(f"Cog {msg.split()[2]} failed to load.")
+                                await message.channel.send(content=f"Failed to Load Cog: {msg.split()[2]}!")
+
+                    if msg.split()[1] == "unload":
+                        if message.author.id == 583200866631155714:
+                            try:
+                                await bot.unload_extension(f"{msg.split()[2]}")
+                                log(f"Cog {msg.split()[2]} unloaded!")
+                                await message.channel.send(content=f"Cog {msg.split()[2]} unloaded!")
+                            except:
+                                log(f"Cog {msg.split()[2]} failed to unload.")
+                                await message.channel.send(content=f"Failed to Unload Cog: {msg.split()[2]}!")
+
                     if msg.split()[1] == "reload":
                         if message.author.id == 583200866631155714:
+                            await bot.unload_extension("commands.context")
                             await bot.unload_extension("commands.help")
                             await bot.unload_extension("commands.server")
                             await bot.unload_extension("commands.user")
                             await bot.unload_extension("background.malblock")
                             await bot.unload_extension("background.autoverify")
 
+                            await bot.load_extension("commands.context")
                             await bot.load_extension("commands.help")
                             await bot.load_extension("commands.server")
                             await bot.load_extension("commands.user")
@@ -261,20 +293,10 @@ class VeriBlox(commands.Bot):
                     await message.channel.send(f"Hello! I'm {bot.user.mention}! for commands, type in `/help`! `{round(bot.latency * 1000)}ms`")
 
     async def on_guild_join(self, guild):
-        gs = await readGuildData()
-
-        if not str(guild.id) in gs:
-            gs[str(guild.id)] = {}
-            gs[str(guild.id)]["verifiedrole"] = 0
-            gs[str(guild.id)]["welcomemessage"] = ""
-            gs[str(guild.id)]["bannedIds"] = []
-            gs[str(guild.id)]["malblock"] = True
-            gs[str(guild.id)]["auto"] = True
-            gs[str(guild.id)]["agereq"] = 0
+        if not guild.id in getGuildList():
+            addGuildData(guild.id)
         else:
             pass
-
-        appendGuildData(gs)
 
         log(f"VeriBlox has been invited to {guild.name} ({len(bot.guilds):,}, {guild.member_count})!")
 
@@ -289,52 +311,45 @@ class VeriBlox(commands.Bot):
         async def missingDataDump():
             while True:
                 for guild in bot.guilds:
-                    gs = await readGuildData()
-
-                    if not str(guild.id) in gs:
-                        gs[str(guild.id)] = {}
-                        gs[str(guild.id)]["verifiedrole"] = 0
-                        gs[str(guild.id)]["welcomemessage"] = ""
-                        gs[str(guild.id)]["bannedIds"] = []
-                        gs[str(guild.id)]["malblock"] = True
-                        gs[str(guild.id)]["auto"] = True
-                        gs[str(guild.id)]["agereq"] = 0
-                        await appendGuildData(gs)
+                    if not guild.id in getGuildList():
+                        addGuildData(guild.id)
                         log(f"Added guild data for {guild.name} ({guild.id})")
                     else:
                         pass
 
-                await sleep(60)
+                await sleep(300)
 
-        async def expireUserData():
+        async def purgeUserData():
             previousDate = 0
             currentDate = date.today().strftime("%d")
             previousDate = currentDate
 
-            for x in await readUserData():
-                vs = await readUserData()
-                if vs[str(x)]["expiredAfter"] == 0:
-                    del vs[str(x)]
-                    log(f"User {x} data expired, Deleted.")
-                await appendUserData(vs)
-
             while True:
                 currentDate = date.today().strftime("%d")            
                 if currentDate != previousDate:
-                    for x in await readUserData():
-                        vs = await readUserData()
-                        if vs[str(x)]["expiredAfter"] != 0:
-                            vs[str(x)]["expiredAfter"] -= 1
-                        
-                        if vs[str(x)]["expiredAfter"] == 0:
-                            del vs[str(x)]
-                            log(f"User {x} data expired, Deleted.")
-                        await appendUserData(vs)
+                    for x in getUserList():
+                        if getUserData(x)[4] == 0:
+                            deleteUserData(x)
+                            log(f"UserDataPurge: Data for {x} has been Deleted.")
+
+                        if getUserData(x)[4] != 0:
+                            editUserData(x, '"dataExpiration"', f'"{getUserData(x)[4] - 1}"')
 
                     previousDate = currentDate
 
-                await sleep(300)
+                await sleep(1800)
         
+        async def purgeGuildData():
+            while True:
+                guildList = [guild.id for guild in bot.guilds]
+
+                for x in getGuildList():
+                    if not guildList.count(int(x)):
+                        deleteGuildData(x)
+                        log(f"GuildDataPurge: Data for {x} has been Deleted.")
+
+                await sleep(1800)
+                
         async def removeTempRT():
             while True:
                 async with aiofiles.open(r"data/ratelimited.json", "r") as f:
@@ -350,38 +365,122 @@ class VeriBlox(commands.Bot):
                     async with aiofiles.open(r"data/ratelimited.json", "w") as f:
                         f.write(dumps(data, indent=4))
                 
-                await sleep(1)
+                await sleep(0.5)
 
         async def resetTempRT():
             while True:
                 users.clear()
                 await sleep(60)
 
+        async def createBackupData():
+            while True:
+                cloneData()
+
+                log("Created Backup Data!")
+                await sleep(14400)
+
+        async def autoCogReloader():
+            log("AutoCogReloader: Creating bytes list...")
+            fileSizes = [0, 0, 0, 0]
+            fileSizes_bg = [0, 0]
+            
+            log("AutoCogReloader: Reading Cogs Size...")
+            ctxSize = getsize(r"./commands/context.py")
+            helpSize = getsize(r"./commands/help.py")
+            serverSize = getsize(r"./commands/server.py")
+            userSize = getsize(r"./commands/user.py")
+            autoverifySize = getsize(r"./background/autoverify.py")
+            malblockSize = getsize(r"./background/malblock.py")
+            
+            log("AutoCogReloader: Appending bytes...")
+            fileSizes[0] = ctxSize
+            fileSizes[1] = helpSize
+            fileSizes[2] = serverSize
+            fileSizes[3] = userSize
+            fileSizes_bg[0] = autoverifySize
+            fileSizes_bg[1] = malblockSize
+
+            log("AutoCogReloader: Started!")
+            while True:
+                ctxSize = getsize(r"./commands/context.py")
+                helpSize = getsize(r"./commands/help.py")
+                serverSize = getsize(r"./commands/server.py")
+                userSize = getsize(r"./commands/user.py")
+                autoverifySize = getsize(r"./background/autoverify.py")
+                malblockSize = getsize(r"./background/malblock.py")
+
+                if fileSizes[0] != ctxSize:
+                    await sleep(2)
+                    await bot.unload_extension("commands.context")
+                    await bot.load_extension("commands.context")
+                    fileSizes[0] = ctxSize
+                    log("AutoCogReloader: Reloaded Context Menu Cog!")
+
+                if fileSizes[1] != helpSize:
+                    await sleep(2)
+                    await bot.unload_extension("commands.help")
+                    await bot.load_extension("commands.help")
+                    fileSizes[1] = helpSize
+                    log("AutoCogReloader: Reloaded Help Cog!")
+
+                if fileSizes[2] != serverSize:
+                    await sleep(2)
+                    await bot.unload_extension("commands.server")
+                    await bot.load_extension("commands.server")
+                    fileSizes[2] = serverSize
+                    log("AutoCogReloader: Reloaded Server Cog!")
+
+                if fileSizes[3] != userSize:
+                    await sleep(2)
+                    await bot.unload_extension("commands.user")
+                    await bot.load_extension("commands.user")
+                    fileSizes[3] = userSize
+                    log("AutoCogReloader: Reloaded User Cog!")
+
+                if fileSizes_bg[0] != autoverifySize:
+                    await sleep(2)
+                    await bot.unload_extension("background.autoverify")
+                    await bot.load_extension("background.autoverify")
+                    fileSizes_bg[0] = autoverifySize
+                    log("AutoCogReloader: Reloaded AutoVerification Background Cog!")
+
+                if fileSizes_bg[1] != malblockSize:
+                    await sleep(2)
+                    await bot.unload_extension("background.malblock")
+                    await bot.load_extension("background.malblock")
+                    fileSizes_bg[1] = malblockSize
+                    log("AutoCogReloader: Reloaded MalBlock Background Cog!")
+
+                await sleep(1)
+
+        bot.loop.create_task(autoCogReloader())
         bot.loop.create_task(updateActivity())
-        bot.loop.create_task(missingDataDump())
-        bot.loop.create_task(expireUserData())
+
+        if testing == False:
+            bot.loop.create_task(purgeUserData())
+            bot.loop.create_task(purgeGuildData())
+            bot.loop.create_task(createBackupData())
+            bot.loop.create_task(missingDataDump())
+            
         bot.loop.create_task(removeTempRT())
         bot.loop.create_task(resetTempRT())
-        log("Tasks Started!")
 
         await bot.tree.sync()
-        log("VeriBlox Started!")
-        sendLog(f"VeriBlox Started!\n```\nShard Count: {bot.shard_count}\nServer Count: {len(bot.guilds):,}\nUser Count: {len(bot.users):,}\n```")
+        log("VeriBlox Ready!")
+        sendLog(f"VeriBlox Ready!\n```\nShard Count: {bot.shard_count}\nServer Count: {len(bot.guilds):,}\nUser Count: {len(bot.users):,}\n```")
 
 bot = VeriBlox()
 
 @bot.tree.command(name="verify", description="Verifies your Discord Account with your Roblox Account on VeriBlox")
 async def verify(interaction : discord.Interaction):
-    vs, gs = await readUserData(), await readGuildData()
     class verificationModal(ui.Modal, title="VeriBlox Verification"):
-        userID = str(interaction.user.id)
-        guildID = str(interaction.guild.id)
+        userID = interaction.user.id
+        guildID = interaction.guild.id
         userName = ui.TextInput(label="Roblox Username", style=discord.TextStyle.short, min_length=3, max_length=20)
 
         async def on_submit(self, interaction: discord.Interaction):
             await interaction.response.defer(thinking=True, ephemeral=True)
             robloxUser = getInfo(str(self.userName), True)
-            robloxID = robloxUser["id"]
 
             if robloxUser["success"] == False:
                 return await interaction.followup.send(content="**🚫 | This Roblox Account doesn't appear to exist!**", ephemeral=True)
@@ -391,30 +490,31 @@ async def verify(interaction : discord.Interaction):
             genCode = ui.Button(label="Regenerate Code", style=discord.ButtonStyle.grey)
             verify  = ui.Button(label="Verify Account", style=discord.ButtonStyle.green)
 
+            robloxUser = getInfo(robloxUser["id"])
+            robloxID = robloxUser["id"]
+
+            if getGuildData(self.guildID)[7] != 0:
+                if not getMembership(robloxUser):
+                    return await interaction.followup.send(content=f"**🚫 | You are required to have a Roblox Premium Membership to join {interaction.guild.name}!**")
 
             if robloxUser["banned"] == True:
                 return await interaction.followup.send(content=f"**🚫 | This Roblox Account appears to be banned.**")
 
             try:
-                if robloxID in gs[self.guildID]["bannedIds"]:
+                if robloxID in getGuildData(self.guildID)[2]:
                     return await interaction.followup.send(content="**🚫 | This Roblox Account appears to be banned from this server.**")
             except:
                 pass
 
-            if not self.userID in vs:
-                vs[self.userID] = {}
-                vs[self.userID]["username"] = robloxUser["username"]
-                vs[self.userID]["displayname"] = robloxUser["displayname"]
-                vs[self.userID]["robloxid"] = robloxUser["id"]
-                vs[self.userID]["verifyCode"] = gen()
-                vs[self.userID]["verified"] = False
-                vs[self.userID]["expiredAfter"] = 60
-                appendUserData(vs)
+            if not self.userID in getUserList():
+                addUserData(self.userID)
+                editUserData(self.userID, '"RobloxID"', f'{robloxUser["id"]}')
+                editUserData(self.userID, '"VerifyCode"', f'"{gen()}"')
 
             async def getVerificationCode(interaction: discord.Interaction):
-                vs = await readUserData()
+                vs = getUserData(self.userID)
                 class verificationCode(ui.Modal, title="VeriBlox Verification Code"):
-                    robloxVerificationCode = ui.TextInput(label="Verification Code", style=discord.TextStyle.long, default=vs[self.userID]["verifyCode"])
+                    robloxVerificationCode = ui.TextInput(label="Verification Code", style=discord.TextStyle.long, default=vs[2])
 
                     async def on_submit(self, interaction: discord.Interaction):
                         await interaction.response.defer()
@@ -422,9 +522,7 @@ async def verify(interaction : discord.Interaction):
                 await interaction.response.send_modal(verificationCode())
 
             async def regenVerificationCode(interaction: discord.Interaction):
-                vs = await readUserData()
-                vs[self.userID]["verifyCode"] = gen()
-                appendUserData(vs)
+                editUserData(self.userID, '"VerifyCode"', f'"{gen()}"')
                 genCode.label = "Regenerate Code"
                 genCode.style = discord.ButtonStyle.red
                 genCode.disabled = True
@@ -432,12 +530,13 @@ async def verify(interaction : discord.Interaction):
                 await sleep(30)
                 genCode.style = discord.ButtonStyle.grey
                 genCode.disabled = False
-                await interaction.edit_original_message(view=view)
+                await interaction.edit_original_response(view=view)
 
             async def verifyUser(interaction: discord.Interaction):
-                vs = readUserData()
+                vs = getUserData(self.userID)
+                gs = getGuildData(self.guildID)
                 robloxUser = getInfo(str(self.userName), True)
-                if vs[self.userID]["verifyCode"] == robloxUser["description"]:
+                if vs[2] == robloxUser["description"]:
                     try:
                         try:
                             creationDate = datetime.fromisoformat(robloxUser["created"][:-1] + "+00:00").timestamp()
@@ -446,19 +545,28 @@ async def verify(interaction : discord.Interaction):
                     except:
                         creationDate = datetime.fromisoformat(robloxUser["created"].split('.')[0]).timestamp()
 
-                    if gs[self.guildID]["agereq"] != 0:
-                        if time() - creationDate < gs[self.guildID]["agereq"]:
+                    if gs[5] != 0:
+                        if round(time.time()) - creationDate < gs[5]:
                             return await interaction.response.send_message(content="**🚫 | This Roblox Account is not Elegible to be in this server. Please use another Roblox Account that's older than this Roblox Account!**")
+
+                    if gs[7] != 0:
+                        if getMembership(robloxUser):
+                            if gs[8] != 0:
+                                try: role = discord.utils.get(interaction.guild.roles, id=gs[8])
+                                except: pass
+
+                                try: await interaction.user.add_roles(role)
+                                except: pass
 
                     try:
                         role = discord.utils.get(interaction.guild.roles, id=gs[self.guildID]["verifiedrole"])
                     except:
-                        return await interaction.response.send_message(content="**🚫 | There was an Error while finding the Verified Role in this server.**")
+                        return await interaction.response.send_message(content="**🚫 | There was an Error while finding the Verified Role in this server.**", ephemeral=True)
 
                     try:
                         await interaction.user.add_roles(role)
                     except:
-                        return await interaction.response.send_message(content="**🚫 | I couldn't give you the Verified Role since the role is higher than my Role Position. or i don't have the proper permission to give you one.**")
+                        return await interaction.response.send_message(content="**🚫 | I couldn't give you the Verified Role since the role is higher than my Role Position. or i don't have the proper permission to give you one.**", ephemeral=True)
 
                     if interaction.guild.me.guild_permissions.manage_nicknames:
                         robloxUserName = robloxUser["username"]
@@ -477,14 +585,11 @@ async def verify(interaction : discord.Interaction):
                                     await interaction.user.edit(nick=f"{robloxDisplayName} - @{robloxUserName}")
                         except: pass
 
-                        vs = await readUserData()
-                        vs[self.userID]["verified"] = True
-                        vs[self.userID]["robloxid"] = robloxUser["id"]
-                        vs[self.userID]["verifyCode"] = gen()
-                        appendUserData(vs)
+                        editUserData(self.userID, '"isVerified"', '"True"')
+                        editUserData(self.userID, '"VerifyCode"', f'"{gen()}"')
 
-                        if gs[self.guildID]["welcomemessage"] != "":
-                            await interaction.user.send(f"Message from **{interaction.guild.name}**\n" + gs[self.guildID]["welcomemessage"])
+                        if gs[2] != "":
+                            await interaction.user.send(f"Message from **{interaction.guild.name}**\n" + gs[2])
 
                         if interaction.user.id == interaction.guild.owner_id:
                             embed = discord.Embed(description=f"Successfully Verified as **{robloxUserName} ({robloxDisplayName})**!\nSince your the **Server Owner**, I am unable to edit your nickname since this is a restriction by **Discord**. This will still work to server members.")
@@ -496,6 +601,7 @@ async def verify(interaction : discord.Interaction):
                 else:
                     return await interaction.response.send_message(content="**🚫 | Looks like you havent pasted the code in your Roblox Description. Please paste it and try again!**", ephemeral=True)
 
+            addUserData(interaction.user.id)
             getCode.callback = getVerificationCode
             genCode.callback = regenVerificationCode
             verify.callback = verifyUser
@@ -506,15 +612,12 @@ async def verify(interaction : discord.Interaction):
             robloxDisplayName = robloxUser["displayname"]
             await interaction.followup.send(content=f"**Account Found!** Verifying as **{robloxUserName} ({robloxDisplayName}**)\n> You can only regenerate your verification code once every **30 seconds**.", view=view, ephemeral=True)
 
-    data = await readUserData()
-
-    if str(interaction.user.id) in data:
-        if data[str(interaction.user.id)]["verified"] == True:
-            robloxUser = getInfo(int(data[str(interaction.user.id)]["robloxid"]))
+    if getUserData(interaction.user.id):
+        if getUserData(interaction.user.id)[3] == "True":
             userID = str(interaction.user.id)
             guildID = str(interaction.guild.id)
-            vs = await readUserData()
-            gs = await readGuildData()
+            gs = getGuildData(guildID)
+            robloxUser = getInfo(int(getUserData(interaction.user.id)[1]), True)
 
             try:
                 try:
@@ -524,12 +627,12 @@ async def verify(interaction : discord.Interaction):
             except:
                 creationDate = datetime.fromisoformat(robloxUser["created"].split('.')[0]).timestamp()
 
-            if gs[guildID]["agereq"] != 0:
-                if time() - creationDate < gs[guildID]["agereq"]:
+            if gs[5] != 0:
+                if time() - creationDate < gs[5]:
                     return await interaction.response.send_message(content="**🚫 | This Roblox Account is not Elegible to be in this server. Please use another Roblox Account that's older than this Roblox Account!**")
 
             try:
-                role = discord.utils.get(interaction.guild.roles, id=gs[guildID]["verifiedrole"])
+                role = discord.utils.get(interaction.guild.roles, id=gs[1])
             except:
                 return await interaction.response.send_message(content="**🚫 | There was an Error while finding the Verified Role in this server.**")
 
@@ -554,19 +657,20 @@ async def verify(interaction : discord.Interaction):
                         else:
                             await interaction.user.edit(nick=f"{robloxDisplayName} - @{robloxUserName}")
                 except: pass
+                
+                editUserData(userID, '"isVerified"', '"True"')
+                editUserData(userID, '"RobloxID"', f'{robloxUser["id"]}')
+                editUserData(userID, '"VerifyCode"', f'"{gen()}"')
 
-                vs[userID]["verified"] = True
-                vs[userID]["displayname"] = robloxDisplayName
-                vs[userID]["verifyCode"] = gen()
-                appendUserData(vs)
+                if gs[2] != "":
+                    await interaction.user.send(f"Message from **{interaction.guild.name}**\n" + gs[2])
 
                 if interaction.user.id == interaction.guild.owner_id:
-                    embed = discord.Embed(description=f"**Successfully Verified as **{robloxUserName} ({robloxDisplayName})**!**\nSince your the **Server Owner**, I am unable to edit your nickname since this is a restriction by **Discord**. This will still work to server members.")
-                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    embed = discord.Embed(description=f"Successfully Verified as **{robloxUserName} ({robloxDisplayName})**!\nSince your the **Server Owner**, I am unable to edit your nickname since this is a restriction by **Discord**. This will still work to server members.")
+                    await interaction.response.edit_message(content=None, embed=embed, view=None)
                 else:
-                    embed = discord.Embed(description=f"**Successfully Verified as **{robloxUserName} ({robloxDisplayName}])!**")
-                    await interaction.response.send_message(embed=embed, ephemeral=True)
-
+                    embed = discord.Embed(description=f"Successfully Verified as **{robloxUserName} ({robloxDisplayName})**!")
+                    await interaction.response.edit_message(content=None, embed=embed, view=None)
         else:
             await interaction.response.send_modal(verificationModal())
 
@@ -576,7 +680,7 @@ async def verify(interaction : discord.Interaction):
 @bot.tree.command(name="setup", description="Creates a verification channel")
 @discord.app_commands.describe(verifiedrole = "The role you want to be set as verified role")
 async def setup(interaction: discord.Interaction, verifiedrole : discord.Role):
-    gs = await readGuildData()
+    gs = getGuildData(interaction.guild.id)
 
     if not interaction.guild:
         embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**")
@@ -592,16 +696,10 @@ async def setup(interaction: discord.Interaction, verifiedrole : discord.Role):
     verified = discord.utils.get(interaction.guild.roles, id=verifiedrole.id)
 
     try:
-        gs[str(guild.id)]["verifiedrole"] = verifiedrole.id
+        editGuildData(interaction.guild.id, '"VerifiedRole"', f'{verifiedrole.id}')
     except KeyError:
-        gs[str(guild.id)] = {}
-        gs[str(guild.id)]["verifiedrole"] = verifiedrole.id
-        gs[str(guild.id)]["welcomemessage"] = ""
-        gs[str(guild.id)]["bannedIds"] = []
-        gs[str(guild.id)]["malblock"] = True
-        gs[str(guild.id)]["agereq"] = 0
-
-    appendGuildData(gs)
+        addGuildData(interaction.guild.id)
+        editGuildData(interaction.guild.id, '"VerifiedRole"', f'{verifiedrole.id}')
 
     category = await guild.create_category("VeriBlox Verification")
     verifychannel = await guild.create_text_channel('verify', category=category)
@@ -617,7 +715,7 @@ async def setup(interaction: discord.Interaction, verifiedrole : discord.Role):
     await category.set_permissions(verified, overwrite=overwrite)
     await category.set_permissions(guild.default_role, overwrite=overwritedefault)
     await interaction.response.send_message(content="**✅ | Verification channel created! to change the verified role, use the command** ``/config verifiedrole``.\nMake sure the verified role is below my role to fully verify a user!", ephemeral=True)
-    
+
 @bot.tree.error
 async def on_command_error(interaction: discord.Interaction, error: Exception):
     embed = discord.Embed()
@@ -648,6 +746,9 @@ async def on_command_error(interaction: discord.Interaction, error: Exception):
     sendLog(f"```cmd\n{traceback_text}\n```", True)
     raise error
 
+if testing == False:    
+    token = getenv("token")
+else:
+    token = getenv("testtoken")
 
-token = getenv("token")
 bot.run(token)

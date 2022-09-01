@@ -1,5 +1,5 @@
 # vCodeGen
-# VeriBlox Package for Generating Verification Codes
+# VeriBlox Package for Generating Verification Codes (since im a dumbass)
 from random import choice
 
 words = ["verification", "verify", "veriblox", "roblox", "api",
@@ -9,7 +9,8 @@ words = ["verification", "verify", "veriblox", "roblox", "api",
          "laptop", "computer", "console", "keyboard", "mouse", 
          "screen", "watch", "camera", "movie", "backpack",
          "cap", "speaker", "sunglasses", "fan", "mirror",
-         "gamepad", "tetris", "games", "avatar", "wireless"]
+         "gamepad", "tetris", "games", "avatar", "wireless",
+         "wifi", "cool", "window", "clean", "time"]
 
 def gen():
     code = ""
