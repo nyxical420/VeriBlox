@@ -23,7 +23,7 @@ load_dotenv("./conf/.env")
 users = {}
 
 # Testing Toggle for Testing Veriblox
-testing = True
+testing = False
 
 if testing == True:
     log("VeriBlox is Running on Test Mode!")
