@@ -1,12 +1,23 @@
 import discord
 import discord.ext.commands as commands
 
+from random import choice, randint
+
 from packages.Logging import log
-from packages.vCodeGen import gen
 from datetime import datetime, time
 from packages.HookLogging import sendLog
 from packages.RobloxAPI import getInfo, getMembership
 from packages.DataEdit import getUserData, getUserList, getGuildData, editUserData
+
+def gen():
+    words = open(r"conf/verification.txt", "r").read().splitlines()
+    code = ""
+
+    for x in range(randint(4, 20)):
+        code += choice(words)
+        if x != 11: code += " "
+    
+    return code
 
 class autoverify(commands.Cog):
     def __init__(self, bot):
@@ -15,7 +26,7 @@ class autoverify(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         if member.id in getUserList():
-            robloxUser = getInfo(int(getUserData[1]))
+            robloxUser = getInfo(int(getUserData(member.id)[1]), True)
             userID = member.id
             guildID = member.guild.id
             guildData = getGuildData(guildID)

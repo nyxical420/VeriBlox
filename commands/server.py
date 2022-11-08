@@ -1,11 +1,11 @@
 import discord
-import discord.app_commands as app_commands
 import discord.ext.commands as commands
 from discord.ext.commands import GroupCog
+import discord.app_commands as app_commands
 
 from typing import Optional
-from packages.DataEdit import getGuildData, getUserData, editGuildData
 from packages.RobloxAPI import getInfo
+from packages.DataEdit import getGuildData, getUserData, editGuildData
 
 @app_commands.guild_only()
 @app_commands.default_permissions(ban_members=True)
@@ -56,8 +56,8 @@ class ban(GroupCog, name="ban"):
         try: await member.send(embed=banMessage)
         except: pass
 
-        await member.ban(reason=reason)
         editGuildData(interaction.guild.id, '"BannedIDS"', f'"{getGuildData(interaction.user.id) + " " + str(getUserData(member.id)[1])}"')
+        await member.ban(reason=reason)
         await interaction.followup.send(f"**✅ | Successfully banned {member.mention} ({member.id}) and their Roblox Account from this server!**")
 
 @app_commands.guild_only()
@@ -109,8 +109,8 @@ class kick(GroupCog, name="kick"):
         try: await member.send(embed=kickMessage)
         except: pass
 
+        editGuildData(interaction.guild.id, '"BannedIDS"', f'"{getGuildData(interaction.guild.id) + " " + str(getUserData(member.id)[1])}"')
         await member.kick(reason=reason)
-        editGuildData(interaction.guild.id, '"BannedIDS"', f'"{getGuildData(interaction.user.id) + " " + str(getUserData(member.id)[1])}"')
         await interaction.followup.send(f"**✅ | Successfully kicked {member.mention} ({member.id}) and banned their Roblox Account from this server!**")
 
 @app_commands.guild_only()
@@ -151,7 +151,6 @@ class unban(GroupCog, name="unban"):
 
         await interaction.followup.send(f"**🚫 | Could not unban user with Name and Discriminator {user}**")
 
-
     @app_commands.command(name="roblox", description="Unbans a Roblox Account from this server")
     @app_commands.describe(username="The username of the banned Roblox Account")
     async def unban_roblox(self, interaction: discord.Interaction, username: str):
@@ -164,14 +163,13 @@ class unban(GroupCog, name="unban"):
             embed = discord.Embed(description="**⚠️ | You are missing the following permission:**\n`moderate_members`", color=0x2F3136)
             return await interaction.followup.send(embed=embed, ephemeral=True)
 
-        gbu = await getInfo(username)
+        gbu = getInfo(username)
 
         if gbu["success"] == False:
             embed = discord.Embed(description="**🚫 | This roblox account doesn't look like it's registered from Roblox.", color=0x2F3136)
             return await interaction.followup.send(embed=embed, ephemeral=True)
 
-
-        if gbu["id"] in getGuildData(interaction.user.id)[3]:
+        if str(gbu["id"]) in getGuildData(interaction.guild.id)[3]:
             str(getGuildData(interaction.user.id)[3]).replace(str(gbu["id"]), "")
         else:
             embed = discord.Embed(description="**🚫 | This roblox account doesn't look like it's banned from this server.**", color=0x2F3136)
@@ -264,22 +262,20 @@ class configuration(GroupCog, name="config"):
     @app_commands.describe(agereq="How many days does the roblox account needs to be fully verified.")
     @app_commands.choices(agereq=[
         app_commands.Choice(name='Disable', value=0), 
-        app_commands.Choice(name='3 days', value=1), 
-        app_commands.Choice(name='1 week', value=2), 
-        app_commands.Choice(name='2 weeks', value=3), 
-        app_commands.Choice(name='3 weeks', value=4), 
-        app_commands.Choice(name='1 month', value=5),
-        app_commands.Choice(name='2 months', value=6),
-        app_commands.Choice(name='3 months', value=7),
-        app_commands.Choice(name='4 months', value=8),
-        app_commands.Choice(name='5 months', value=9),
-        app_commands.Choice(name='1 year', value=10)
+        app_commands.Choice(name='3 Days', value=1), 
+        app_commands.Choice(name='1 Week', value=2), 
+        app_commands.Choice(name='2 Weeks', value=3), 
+        app_commands.Choice(name='3 Weeks', value=4), 
+        app_commands.Choice(name='1 Month', value=5),
+        app_commands.Choice(name='2 Months', value=6),
+        app_commands.Choice(name='3 Months', value=7),
+        app_commands.Choice(name='4 Months', value=8),
+        app_commands.Choice(name='5 Months', value=9),
+        app_commands.Choice(name='1 Year', value=10)
         ])
     async def accagereq(self, interaction: discord.Interaction, agereq: int):
-        try:
-            str(interaction.guild.id)
-        except:
-            embed = discord.Embed(description="**You can't run this command on DMs!**", color=0x2F3136)
+        if not interaction.guild:
+            embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**", color=0x2F3136)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
 
         if not interaction.user.guild_permissions.manage_guild:

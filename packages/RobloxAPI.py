@@ -3,6 +3,7 @@
 
 from os import getenv
 from httpx import get
+from datetime import datetime
 from dotenv import load_dotenv
 from packages.Logging import log
 load_dotenv(r"./conf/.env")
@@ -44,12 +45,25 @@ def getInfo(user, verification: bool = False):
         followers = get(f"https://friends.roblox.com/v1/users/{userId}/followers/count")
         following = get(f"https://friends.roblox.com/v1/users/{userId}/followings/count")
 
+        status_pt = status.json()["PresenceType"]
         status = status.json()["LastLocation"]
         friends = friends.json()["count"]
         followers = followers.json()["count"]
         following = following.json()["count"]
+
+        try:
+            try:
+                creationdate = datetime.fromisoformat(created[:-1] + '+00:00')
+                created = f"Account Created on {creationdate.strftime('%d %B, %Y')}"
+            except:
+                creationdate = datetime.strptime(created,"%Y-%m-%dT%H:%M:%S.%fZ")
+                created = f"Account Created on {creationdate.strftime('%d %B, %Y')}"
+        except:
+            creationdate = datetime.fromisoformat(created.split('.')[0])
+            created = f"Account Created on {creationdate.strftime('%d %B, %Y')}"
+
         log(f"RobloxAPI: Information Sent with Additional User Information!")
-        return {"success": True, "id": userId, "status": f"{status}", "username": f"{username}", "displayname": f"{displayName}", "description": f"{description}", "created": f"{created}", "count": [friends, followers, following], "banned": banned}
+        return {"success": True, "id": userId, "status": f"{status}", "pType": status_pt, "username": f"{username}", "displayname": f"{displayName}", "description": f"{description}", "created": f"{created}", "count": [friends, followers, following], "banned": banned}
     
     log(f"RobloxAPI: Information Sent!")
     return {"success": True, "id": userId, "username": f"{username}", "displayname": f"{displayName}", "description": f"{description}", "created": f"{created}", "banned": banned}

@@ -18,7 +18,7 @@ def addGuildData(guildid: int):
     data = sqlite3.connect(r"data/data.db")
     cursor = data.cursor()
     
-    cursor.execute(f'INSERT INTO guilds VALUES ({guildid}, 0, "", "", 0, 0, 1, 0)')
+    cursor.execute(f'INSERT INTO guilds VALUES ({guildid}, 0, "", "0", 0, 0, 1, 0, 0)')
     
     data.commit()
     data.close()
@@ -52,6 +52,7 @@ def deleteUserData(userid: int):
 
     cursor.execute(f"DELETE FROM users WHERE UserID = '{userid}'")
     data.commit()
+    data.close()
     log(f"DataEdit: Deleted User Data for ID: {userid}")
 
 def deleteGuildData(guildid: int):
@@ -60,6 +61,7 @@ def deleteGuildData(guildid: int):
 
     cursor.execute(f"DELETE FROM guilds WHERE GuildID = '{guildid}'")
     data.commit()
+    data.close()
     log(f"DataEdit: Deleted Guild Data for ID: {guildid}")
 
 # Get Data
@@ -68,14 +70,29 @@ def getUserData(userid: int):
     cursor = data.cursor()
     
     cursor.execute(f"SELECT * FROM users WHERE UserID = '{userid}'")
-    return cursor.fetchone()
+    result = cursor.fetchone()
+    cursor.close()
+    data.close()
+    return result
 
 def getGuildData(guildid: int):
     data = sqlite3.connect(r"data/data.db")
     cursor = data.cursor()
     
     cursor.execute(f"SELECT * FROM guilds WHERE GuildID = '{guildid}'")
-    return cursor.fetchone()
+    result = cursor.fetchone()
+
+    if result:
+        cursor.close()
+        data.close()
+        return result
+    else:
+        addGuildData(guildid)
+        cursor.execute(f"SELECT * FROM guilds WHERE GuildID = '{guildid}'")
+        result = cursor.fetchone()
+        cursor.close()
+        data.close()
+        return result
 
 # Get Lists
 def getUserList():
@@ -86,7 +103,9 @@ def getUserList():
     tempUsers = []
     for users in cursor.fetchall():
         tempUsers.append(users[0])
-    
+
+    cursor.close()
+    data.close()
     return tempUsers
 
 def getGuildList():
@@ -98,8 +117,6 @@ def getGuildList():
     for guilds in cursor.fetchall():
         tempGuilds.append(guilds[0])
     
+    cursor.close()
+    data.close()
     return tempGuilds
-
-# Clone Data
-def cloneData():
-    ...

@@ -3,7 +3,7 @@ import discord.ui as ui
 import discord.ext.commands as commands
 import discord.app_commands as app_commands
 
-from datetime import datetime
+from packages.ImageGen import createRobloxInfo
 from packages.RobloxAPI import getInfo, getAvatar
 from packages.DataEdit import getUserData, getUserList
 
@@ -38,76 +38,54 @@ class Whois(commands.Cog):
             return await interaction.followup.send("Looks like you aren't verified to VeriBlox. Please verify to use this command!")
             
         if not interaction.guild:
-            embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**")
+            embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**", color=0x2F3136)
             return await interaction.followup.send(embed=embed)
+
+        member = interaction.user if not user else user
 
         view = userView(interaction.user, timeout=300)
 
         try:
-            data = getUserData(user.id)
+            data = getUserData(member.id)
             if data[3] == "False":
-                return await interaction.followup.send(content=f"{user.mention} doesn't seem to be verified.")
+                return await interaction.followup.send(content=f"{member.mention} doesn't seem to be verified.")
         except:
-            return await interaction.followup.send(content=f"{user.mention} doesn't seem to be verified.")
+            return await interaction.followup.send(content=f"{member.mention} doesn't seem to be verified.")
 
-        async def deletewhois(interaction):
+        uid = int(data[1])
+        info = getInfo(uid)
+        profile_button = ui.Button(label="Visit Roblox Profile", style=discord.ButtonStyle.url, url=f"https://www.roblox.com/users/{uid}/profile")
+        description = ui.Button(label="Show Description", style=discord.ButtonStyle.grey)
+        delete = ui.Button(label="Delete", style=discord.ButtonStyle.red)
+
+        async def deletewhois(interaction: discord.Interaction):
             await interaction.response.defer()
-            try: await interaction.delete_original_response()
+            try: await interaction.delete_original_message()
             except: pass
         
+        async def showDescription(interaction: discord.Interaction):
+            view.remove_item(profile_button)
+            view.remove_item(description)
+            view.remove_item(delete)
+            await interaction.response.defer()
+            await interaction.followup.send(content=info["description"], view=view, ephemeral=True)
+
         async def timeout():
             view.remove_item(delete)
+            view.remove_item(description)
             try: await interaction.edit_original_response(view=view)
             except: return
                 
-        uid = data[1]
-        info = getInfo(uid)
-        status = info["status"]
-        description = info["description"]
+        avatar = getAvatar("fullbody", uid, 3)
+        id = createRobloxInfo(avatar, info)
 
-        profile_button = ui.Button(label="Visit Roblox Profile", style=discord.ButtonStyle.url, url=f"https://www.roblox.com/users/{uid}/profile")
-        avatarimage = getAvatar("fullbody", uid, 4)
-        delete = ui.Button(label="Delete", style=discord.ButtonStyle.red)
-        
-        if len(description) >= 257:
-            description = "Description could not be displayed since it exceeds more than **256 characters**."
-
-        embed = discord.Embed()
-        if info["banned"] == True:
-            embed.title = info["username"] + "'s Roblox Profile"
-            embed.description = f"**Banned**\n{description}"
-            embed.color = 0xFF6961
-        
-        else:
-            embed.title = info["username"] + "'s Roblox Profile"
-            embed.description = f"**{status}**\n{description}"
-            embed.color = self.colors[status]
-            view.add_item(profile_button)
-
-        try:
-            try:
-                creationdate = datetime.fromisoformat(info["created"][:-1] + '+00:00')
-                embed.set_footer(text=f"Account Created on {creationdate.strftime('%d %B, %Y')}")
-            except:
-                creationdate = datetime.strptime(info["created"],"%Y-%m-%dT%H:%M:%S.%fZ")
-                embed.set_footer(text=f"Account Created on {creationdate.strftime('%d %B, %Y')}")
-        except:
-            creationdate = datetime.fromisoformat(info["created"].split('.')[0])
-            embed.set_footer(text=f"Account Created on {creationdate.strftime('%d %B, %Y')}")
-
-        embed.set_thumbnail(url=avatarimage)
-        fr, fo, flw = info["count"][0], info["count"][1], info["count"][2]
-        embed.add_field(name="Roblox Username", value="**" + info["username"] + "**", inline=True)
-        embed.add_field(name="Roblox Display Name", value="**" + info["displayname"] + "**", inline=True)
-        embed.add_field(name="Roblox ID", value=f"**{uid}**", inline=True)
-        embed.add_field(name="Friends", value=f"**{fr}/200**", inline=True)
-        embed.add_field(name="Followers", value=f"**{fo:,}**", inline=True)
-        embed.add_field(name="Following", value=f"**{flw:,}**", inline=True)
-
+        description.callback = showDescription
         delete.callback = deletewhois
         view.on_timeout = timeout
+        view.add_item(profile_button)
+        view.add_item(description)
         view.add_item(delete)
-        await interaction.followup.send(embed=embed, view=view)
+        await interaction.followup.send(file=discord.File(f"./assets/robloxImages/users/{id}/info.png"), view=view)
 
 async def setup(bot) -> None:
     await bot.add_cog(Whois(bot))

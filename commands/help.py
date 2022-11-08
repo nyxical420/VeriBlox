@@ -31,6 +31,7 @@ class helpmenu(commands.Cog):
                                                    "`/search game` - Searches for a Roblox Game by Name\n"
                                                    "`/avatar` - Shows the Member's Roblox Avatar\n"
                                                    "`/invite` - Gives an Invite Link for VeriBlox\n"
+                                                   "`/stats` - Shows Current VeriBlox Stats\n"
                                                    "`/data` - Shows a Preview of your current VeriBlox Data", inline=False)
         
         cmds.add_field(name="Tools", value="`/devex robux` - Converts Robux to a Certain Type of Currency\n"
