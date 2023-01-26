@@ -3,6 +3,7 @@ import discord.ext.commands as commands
 
 from random import choice, randint
 
+import time as btime
 from packages.Logging import log
 from datetime import datetime, time
 from packages.HookLogging import sendLog
@@ -43,55 +44,64 @@ class autoverify(commands.Cog):
                 creationDate = datetime.fromisoformat(robloxUser["created"].split('.')[0]).timestamp()
 
             if guildData[5] != 0:
-                if time() - creationDate < guildData[5]:
-                    return await member.send(content="**🚫 | This Roblox Account is not Elegible to be in this server. Please use another Roblox Account that's older than this Roblox Account!**")
+                if round(btime.time()) - creationDate < guildData[5]:
+                    embed = discord.Embed(title="Verification Failed")
+                    embed.description = "Your Roblox Account is not old enough to be Verified in this server. please Retry Verification by using an older account!"
+                    return await member.send(embed=embed)
+
+            try:
+                role = discord.utils.get(member.guild.roles, id=guildData[1])
+            except:
+                embed = discord.Embed(title="Verification Failed")
+                embed.description = "There was an unexpected error while getting the Verified Role for this Server. please Retry Verification!"
+                return await member.send(embed=embed)
+
+            try:
+                await member.add_roles(role)
+            except discord.Forbidden:
+                embed = discord.Embed(title="Verification Failed")
+                embed.description = "I couldn't Verify you in the Server since i don't have the proper permission to give you one. Please contact a Server Moderator who can fix this issue and Retry Verification!"
+                return await member.send(embed=embed)
+            except discord.HTTPException:
+                embed = discord.Embed(title="Verification Failed")
+                embed.description = "There was an error that wouldn't allow me to give you the Verified Role. please Retry Verification!"
+                return await member.send(embed=embed)
+            except:
+                embed = discord.Embed(title="Verification Failed")
+                embed.description = "There was an unexpected error while giving you the Verified Role for this server. please Retry Verification!"
+                return await member.send(embed=embed)
 
             if guildData[7] != 0:
                 if getMembership(robloxUser):
                     if guildData[8] != 0:
                         try: role = discord.utils.get(member.guild.roles, id=guildData[8])
                         except: pass
-                        
+
                         try: await member.add_roles(role)
                         except: pass
-                else:
-                    return await member.send(content=f"**🚫 | You are required to have a Roblox Premium Membership to join {member.guild.name}!**")
-
-            try:
-                role = discord.utils.get(member.guild.roles, id=guildData[1])
-            except:
-                return await member.send(content="**🚫 | There was an Error while finding the Verified Role in this server.**")
-
-            try:
-                await member.add_roles(role)
-            except:
-                return await member.send(content="**🚫 | I couldn't give you the Verified Role since the role is higher than my Role Position. or i don't have the proper permission to give you one.**")
 
             if member.guild.me.guild_permissions.manage_nicknames:
+                nameFormat = getGuildData(member.guild.id)[9]
                 robloxUserName = robloxUser["username"]
                 robloxDisplayName = robloxUser["displayname"]
+                robloxUserId = robloxUser["id"]
 
-                if member.id == member.guild.owner_id:
-                    pass
+                nameFormat = nameFormat.replace("<robloxUsername>", robloxUserName)
+                nameFormat = nameFormat.replace("<robloxDisplay>", robloxDisplayName)
+                nameFormat = str(nameFormat).replace("<robloxId>", str(robloxUserId))
+                nameFormat = nameFormat.replace("<discordUsername>", member.name)
+
+                if member.id == member.guild.owner_id: pass
                 
                 try:
-                    if robloxUserName == robloxDisplayName:
-                        await member.edit(nick=robloxDisplayName)
-                    else:
-                        if len(robloxUserName + robloxDisplayName) >= 32:
-                            await member.edit(nick=robloxUserName)
-                        else:
-                            await member.edit(nick=f"{robloxDisplayName} - @{robloxUserName}")
+                    if len(nameFormat) >= 33: await member.edit(nick=robloxUserName)
+                    else: await member.edit(nick=nameFormat)
                 except: pass
-
-                editUserData(userID, '"isVerified"', '"True"')
-                editUserData(userID, '"RobloxID"', f'{robloxUser["id"]}')
-                editUserData(userID, '"VerifyCode"', f'"{gen()}"')
 
                 if guildData[2] != "":
                     await member.send(f"Message from **{member.guild.name}**\n" + guildData[2])
 
-                if member.id == member.guild.owner.id:
+                if member.id == member.guild.owner_id:
                     embed = discord.Embed(description=f"Successfully Verified as **{robloxUserName} ({robloxDisplayName})**!\nSince your the **Server Owner**, I am unable to edit your nickname since this is a restriction by **Discord**. This will still work to server members.")
                     await member.send(content=None, embed=embed, view=None)
                 else:

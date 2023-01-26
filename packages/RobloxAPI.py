@@ -40,7 +40,7 @@ def getInfo(user, verification: bool = False):
 
     if verification == False:
         log(f"RobloxAPI: Getting additional User Information...")
-        status  = get(f"https://api.roblox.com/users/{userId}/onlinestatus/")
+        status  = get(f"https://api.roproxy.com/users/{userId}/onlinestatus/")
         friends = get(f"https://friends.roblox.com/v1/users/{userId}/friends/count")
         followers = get(f"https://friends.roblox.com/v1/users/{userId}/followers/count")
         following = get(f"https://friends.roblox.com/v1/users/{userId}/followings/count")
@@ -163,3 +163,16 @@ def getMembership(user):
 
     log("RobloxAPI: Membership Status Sent!")
     return get(f"https://premiumfeatures.roblox.com/v1/users/{user}/validate-membership", cookies={".ROBLOSECURITY": rbxcookie}).json()
+
+def getGroupRoles(id: int):
+    try:
+        roles = get(f"https://groups.roblox.com/v1/groups/{id}/roles").json()["roles"]
+        tempRoleList = []
+
+        for x in range(len(roles) - 1):
+            role = roles[x + 1]
+            #                    ID          NAME
+            tempRoleList.append((role["id"], role["name"], role["memberCount"]))
+        return {"success": True, "roleList": tempRoleList}
+    except:
+        return {"success": False}

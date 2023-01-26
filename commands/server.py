@@ -1,11 +1,27 @@
 import discord
+import discord.ui as ui
 import discord.ext.commands as commands
 from discord.ext.commands import GroupCog
 import discord.app_commands as app_commands
 
+from httpx import get
 from typing import Optional
-from packages.RobloxAPI import getInfo
+from packages.RobloxAPI import getInfo, getGroupRoles
 from packages.DataEdit import getGuildData, getUserData, editGuildData
+
+class userView(ui.View):
+    def __init__(self, user: discord.User, timeout: int = 600):
+        super().__init__(timeout=timeout)
+        self.user = user
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user and interaction.user.id == self.user.id:
+            return interaction.user and interaction.user.id == self.user.id
+        else:
+            await interaction.response.send_message(f"<@{self.user.id}> can only interact with this!", ephemeral=True)
+    
+    async def on_timeout(self):
+        return await super().on_timeout()
 
 @app_commands.guild_only()
 @app_commands.default_permissions(ban_members=True)
@@ -122,6 +138,14 @@ class unban(GroupCog, name="unban"):
     async def unban_id(self, interaction: discord.Interaction, id: str, reason: Optional[str] = "No reason provided."):
         await interaction.response.defer(thinking=True)
 
+        if not interaction.guild:
+            embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**", color=0x2F3136)
+            return await interaction.followup.send(embed=embed, ephemeral=True)
+
+        if not interaction.user.guild_permissions.moderate_members:
+            embed = discord.Embed(description="**⚠️ | You are missing the following permission:**\n`moderate_members`", color=0x2F3136)
+            return await interaction.followup.send(embed=embed, ephemeral=True)
+
         try:
             id = int(id)
         except:
@@ -141,6 +165,15 @@ class unban(GroupCog, name="unban"):
     @app_commands.describe(user = "The Name and Discriminator of the user to unban", reason = "The reason of the unban")
     async def unban_user(self, interaction: discord.Interaction, user: str, reason: Optional[str] = "No reason provided."):
         await interaction.response.defer(thinking=True)
+
+        if not interaction.guild:
+            embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**", color=0x2F3136)
+            return await interaction.followup.send(embed=embed, ephemeral=True)
+
+        if not interaction.user.guild_permissions.moderate_members:
+            embed = discord.Embed(description="**⚠️ | You are missing the following permission:**\n`moderate_members`", color=0x2F3136)
+            return await interaction.followup.send(embed=embed, ephemeral=True)
+
         banEntry = [entry async for entry in interaction.guild.bans(limit=5000)]
         user_name, user_discriminator = user.split('#')
 
@@ -219,28 +252,47 @@ class configuration(GroupCog, name="config"):
         editGuildData(interaction.guild.id, '"VerifiedRole"', f'{verifiedrole.id}')
         await interaction.response.send_message(content=f"Set verified role to **{verifiedrole}**!", ephemeral=True)
     
-    @app_commands.command(name="premiumrole", description="Sets the Premium Role to this server")
-    @app_commands.describe(premiumrole="The role you want to set as the Premium Role")
-    async def premiumrole(self, interaction: discord.Interaction, premiumrole : discord.Role):    
-        if not interaction.guild:
-            embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**", color=0x2F3136)
-            return await interaction.response.send_message(embed=embed, ephemeral=True)
-        
-        if not interaction.user.guild_permissions.manage_roles:
-            embed = discord.Embed(description="**⚠️ | You are missing the following permission:**\n`manage_roles`", color=0x2F3136)
-            return await interaction.response.send_message(embed=embed, ephemeral=True)
-        
-        if premiumrole == interaction.guild.default_role:
-            return await interaction.response.send_message(content="You can't set the Premium Role as the default role! (@everyone)", ephemeral=True)
-        
-        if not discord.utils.get(interaction.guild.roles, id=premiumrole.id):
-            return await interaction.response.send_message(content=f"There was an error while finding the role {premiumrole}.", ephemeral=True)
+    #@app_commands.command(name="premiumrole", description="Sets the Premium Role to this server")
+    #@app_commands.describe(premiumrole="The role you want to set as the Premium Role")
+    #async def premiumrole(self, interaction: discord.Interaction, premiumrole : discord.Role):    
+    #    if not interaction.guild:
+    #        embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**", color=0x2F3136)
+    #        return await interaction.response.send_message(embed=embed, ephemeral=True)
+    #    
+    #    if not interaction.user.guild_permissions.manage_roles:
+    #        embed = discord.Embed(description="**⚠️ | You are missing the following permission:**\n`manage_roles`", color=0x2F3136)
+    #        return await interaction.response.send_message(embed=embed, ephemeral=True)
+    #    
+    #    if premiumrole == interaction.guild.default_role:
+    #        return await interaction.response.send_message(content="You can't set the Premium Role as the default role! (@everyone)", ephemeral=True)
+    #    
+    #    if not discord.utils.get(interaction.guild.roles, id=premiumrole.id):
+    #        return await interaction.response.send_message(content=f"There was an error while finding the role {premiumrole}.", ephemeral=True)
 
-        editGuildData(interaction.guild.id, '"PremiumRole"', f'{premiumrole.id}')
-        await interaction.response.send_message(content=f"Set Premium Role to **{premiumrole}**!", ephemeral=True)
-    
-    @app_commands.command(name="premiumonly", description="Enables or Disables Premium-Only Verification")
-    async def premiumonly(self, interaction: discord.Interaction):
+    #    editGuildData(interaction.guild.id, '"PremiumRole"', f'{premiumrole.id}')
+    #    await interaction.response.send_message(content=f"Set Premium Role to **{premiumrole}**!", ephemeral=True)
+    #
+    #@app_commands.command(name="premiumonly", description="Enables or Disables Premium-Only Verification")
+    #async def premiumonly(self, interaction: discord.Interaction):
+    #    if not interaction.guild:
+    #        embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**", color=0x2F3136)
+    #        return await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    #    if not interaction.user.guild_permissions.manage_guild:
+    #        embed = discord.Embed(description="**⚠️ | You are missing the following permission:**\n`manage_guild`", color=0x2F3136)
+    #        return await interaction.response.send_message(embed=embed, ephemeral=True)
+    #    
+    #    data = getGuildData(interaction.guild.id)
+
+    #    if data[7] == 1:
+    #        editGuildData(interaction.guild.id, '"PremiumOnly"', '0')
+    #        await interaction.response.send_message(content=f"Disabled **Premiun-Only Verification**.", ephemeral=True)
+    #    else:
+    #        editGuildData(interaction.guild.id, '"PremiumOnly"', '1')
+    #        await interaction.response.send_message(content=f"Enabled **Premiun-Only Verification**!", ephemeral=True)
+
+    @app_commands.command(name="format", description="Changes the name of a Member's Name in a format")
+    async def nameformat(self, interaction: discord.Interaction):
         if not interaction.guild:
             embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**", color=0x2F3136)
             return await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -250,13 +302,107 @@ class configuration(GroupCog, name="config"):
             return await interaction.response.send_message(embed=embed, ephemeral=True)
         
         data = getGuildData(interaction.guild.id)
+        view = ui.View(timeout=120)
+        currentNameFormat = data[9]
+        embed = discord.Embed(title="VeriBlox Name Format",
+        description=f"Current Name Format: **{currentNameFormat}**\n"
+                    "Name Format Arguments\n"
+                    "```\n"
+                    "<robloxUsername>      - Displays a Member's Roblox Username\n"
+                    "<robloxDisplay>       - Displays a Member's Roblox Display Name\n"
+                    "<robloxId>            - Displays a Member's Roblox User ID\n"
+                    "<discordUsername>     - Displays a Member's Name with their Discord Name\n"
+                    "```")
+        
+        async def newNameFormat(interaction: discord.Interaction):
+            class nameFormatModal(ui.Modal, title="Name Format"):
+                nameFormat = ui.TextInput(label="New Name Format", default=data[9], style=discord.TextStyle.short, min_length=16)
 
-        if data[7] == 1:
-            editGuildData(interaction.guild.id, '"PremiumOnly"', '0')
-            await interaction.response.send_message(content=f"Disabled **Premiun-Only Verification**.", ephemeral=True)
-        else:
-            editGuildData(interaction.guild.id, '"PremiumOnly"', '1')
-            await interaction.response.send_message(content=f"Enabled **Premiun-Only Verification**!", ephemeral=True)
+                async def on_submit(self, interaction: discord.Interaction):
+                    nameFormat = str(self.nameFormat)
+                    if nameFormat == "": nameFormat = "<robloxUsername>"
+
+                    editGuildData(interaction.guild.id, '"NameFormat"', f'"{nameFormat}"')
+                    await interaction.response.send_message(f"Successfully set Name Format to **{nameFormat}**!", ephemeral=True)
+            
+            await interaction.response.send_modal(nameFormatModal())
+
+
+        changeFormat = ui.Button(label="Change Name Format", style=discord.ButtonStyle.grey)
+        changeFormat.callback = newNameFormat
+        view.add_item(changeFormat)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        
+   #@app_commands.command(name="bind", description="Binds a Roblox Group, Discord Role or Badge")
+   #async def bind(self, interaction: discord.Interaction):
+   #    view = userView(interaction.user)
+   #    embed = discord.Embed(title="VeriBlox Bind", description="To start binding, please select an option below to start!")
+
+   #    select = ui.Select(
+   #        placeholder="Select Bind Option",
+   #        options=[
+   #        discord.SelectOption(label="Roblox Group", value="group"),
+   #        discord.SelectOption(label="Roblox Group Roles", value="grouproles"),
+   #        discord.SelectOption(label="Roblox Gapemass", value="gamepass"),
+   #        discord.SelectOption(label="Roblox Badge", value="badge")
+   #    ])
+
+   #    async def startBind(interaction: discord.Interaction):
+   #        if select.values[0] == "group":
+   #            class groupBind(ui.Modal, title="VeriBlox - Group Bind"):
+   #                userID = interaction.user.id
+   #                guildID = interaction.guild.id
+   #                robloxGroupId = ui.TextInput(label="Roblox Group ID", style=discord.TextStyle.short, min_length=1)
+
+   #                async def on_submit(self, interaction: discord.Interaction):
+   #                    data = get(f"https://groups.roblox.com/v1/groups/{self.robloxGroupId.value}").json()
+
+   #                    try: 
+   #                        data["errors"]
+   #                        return await interaction.response.edit_message(content=f"The Roblox Group with the Id **{self.robloxGroupId.value}** could not be found.", embed=None, view=None)
+   #                    except: pass
+
+   #                    groupName = data["name"]
+   #                    editGuildData(interaction.guild.id, '"Group"', f'{self.robloxGroupId.value}')
+   #                    await interaction.response.edit_message(content=f"Successfully Binded Roblox Group to **{groupName} ({self.robloxGroupId.value})**!", embed=None, view=None)
+
+   #            await interaction.response.send_modal(groupBind())
+
+   #        if select.values[0] == "grouproles":
+   #            view.remove_item(select)
+
+   #            groupRoleList = []
+   #            data = getGuildData(interaction.guild.id)
+
+   #            if data[10] == 0: return await interaction.response.send_message("Please bind your Roblox Group first before using this bind option!", ephemeral=True)
+   #            print(data[10])
+   #            r = list(getGroupRoles(data[10])).reverse
+
+   #            for x in range(len(r)):
+   #                roleName = r["roleList"][x][1]
+   #                roleId = r["roleList"][x][0]
+   #                groupRoleList.append(discord.SelectOption(label=f"{roleName} ({roleId})", value=roleId))
+
+   #            groupRoles = ui.Select(placeholder="Select Group Role", options=groupRoleList)
+   #            serverRoles = ui.RoleSelect(placeholder="Select Server Role")
+
+   #            async def defer(interaction: discord.Interaction):
+   #                print(groupRoles.values[0])
+   #                print(serverRoles.values[0].id)
+   #                await interaction.response.defer()
+
+   #            groupRoles.callback = defer
+   #            serverRoles.callback = defer
+   #            view.add_item(groupRoles)
+   #            view.add_item(serverRoles)
+   #            embed = discord.Embed(title="Group Role Binding", description="Binds your Roblox Group Roles to your Discord Server")
+   #            await interaction.response.edit_message(embed=embed, view=view)
+
+   #        if select.values[0] == "badges": ...
+
+   #    select.callback = startBind
+   #    view.add_item(select)
+   #    await interaction.response.send_message(embed=embed, view=view)
 
     @app_commands.command(name="accagereq", description="Changes the account age requirement to be fully verified on this server")
     @app_commands.describe(agereq="How many days does the roblox account needs to be fully verified.")

@@ -6,7 +6,7 @@ verify
 clothes
 shoes
 hat
-dess
+dress
 shirt
 pants
 gaming

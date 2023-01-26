@@ -28,23 +28,26 @@ class commands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    @app_commands.command(name="stats", description="Shows Current VeriBlox Stats")
+    @app_commands.command(name="stats", description="Displays VeriBlox Stats")
     async def stats(self, interaction: discord.Interaction):
         p = psutil.Process(os.getpid())
-        embed = discord.Embed(title="VeriBlox Stats", description="Roblox Verification made Easy with VeriBlox!", color=0x2F3136)
-        embed.add_field(name="Servers", value=f"{len(self.bot.guilds):,} ({len(self.bot.users):,})")
+        embed = discord.Embed(title="VeriBlox Stats", description="Roblox Verification made Easy and Fast with VeriBlox!", color=0x2F3136)
+        embed.add_field(name="Servers", value=f"{len(self.bot.guilds):,} ({len(self.bot.users):,} Users)")
         embed.add_field(name="Latetncy", value=f"{round(self.bot.latency * 1000)}ms")
 
         mb = str(p.memory_info().rss/1000000).split(".")
         kb = str(p.memory_info().rss/1000).split(".")
-        embed.add_field(name="Memory Usage", value=f"{mb[0]} MB | {kb[0]} KB")
+        embed.add_field(name="Memory Usage", value=f"**{mb[0]} MB ({kb[0]} KB)**")
         embed.add_field(name="Uptime", value=f"Online <t:{round(p.create_time())}:R>", inline=False)
-        embed.add_field(name="Others", value=f"[**VeriBlox Discord Server**](https://discord.gg/EHNtECJRKA)\n[**Invite VeriBlox**](https://discord.com/api/oauth2/authorize?client_id=872081372162973736&permissions=1377007119382&scope=bot%20applications.commands)\n[**Github Repository (PyTsun/VeriBlox)**](https://github.com/PyTsun/VeriBlox)\n[**HeyDerDahl**](https://heyderdahl.com/)\n[**Top.gg Page**](https://top.gg/bot/872081372162973736)", inline=False)
-
+        embed.add_field(name="Others", value=f"**[Github Repository (PyTsun/VeriBlox)](https://github.com/PyTsun/VeriBlox)\n"
+                                              "[VeriBlox Support Server](https://discord.gg/EHNtECJRKA)\n"
+                                              "[VeriBlox Top.gg Page](https://top.gg/bot/872081372162973736)\n"
+                                              "[Invite VeriBlox](https://discord.com/api/oauth2/authorize?client_id=872081372162973736&permissions=1377007119382&scope=bot%20applications.commands)**", inline=False)
+        embed.set_footer(text="VeriBlox Version: v2.5")
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name="whois", description="Views the mebmer's Roblox Profile")
-    @app_commands.describe(member="The member you want to view their Roblox Profile")
+    @app_commands.command(name="whois", description="Displays the Member's Roblox Profile")
+    @app_commands.describe(member="The Roblox Profile of a Member you want to view")
     async def whois(self, interaction : discord.Interaction, member : Optional[discord.Member] = None):
         await interaction.response.defer(thinking=True)  
 
@@ -62,9 +65,9 @@ class commands(commands.Cog):
         try:
             data = getUserData(member.id)
             if data[3] == "False":
-                return await interaction.followup.send(content=f"{member.mention} doesn't seem to be verified.")
+                return await interaction.followup.send(content=f"{member.mention} isn't verified on VeriBlox.")
         except:
-            return await interaction.followup.send(content=f"{member.mention} doesn't seem to be verified.")
+            return await interaction.followup.send(content=f"{member.mention} isn't verified on VeriBlox.")
 
         uid = int(data[1])
         info = getInfo(uid)
@@ -102,8 +105,8 @@ class commands(commands.Cog):
         await interaction.followup.send(file=discord.File(f"./assets/robloxImages/users/{id}/info.png"), view=view)
 
     @app_commands.checks.cooldown(1, 5, key=lambda i: i.user.id)
-    @app_commands.command(name="avatar", description="Shows the member's Roblox Avatar")
-    @app_commands.describe(member="The member you want to view their Roblox Avatar", viewtype="Type of view the camera you want to show", imageres="The resolution of the image")
+    @app_commands.command(name="avatar", description="Displays the Member's Roblox Avatar")
+    @app_commands.describe(member="The Roblox Avatar of a Member you want to view", viewtype="Type of View you want to Display their Roblox Avatar from", imageres="The Resolution of the Roblox Avatar you want to be displayed")
     @app_commands.choices(viewtype=[app_commands.Choice(name='Headshot', value="headshot"), app_commands.Choice(name='Bustshot', value="bustshot"), app_commands.Choice(name='Fullbody', value="fullbody")])
     @app_commands.choices(imageres=[app_commands.Choice(name='150 x 150', value=0), app_commands.Choice(name='180 x 180', value=1), app_commands.Choice(name='352 x 352', value=2), app_commands.Choice(name='420 x 420', value=3), app_commands.Choice(name='720 x 720', value=4)])
     async def avatar(self, interaction : discord.Interaction, member : Optional[discord.Member], viewtype : str, imageres : int):
@@ -114,10 +117,10 @@ class commands(commands.Cog):
             return await interaction.response.send_message("You need your Roblox Account to be Verified on VeriBlox before you can use this Command!")
 
         if not member.id in getUserList():
-            return await interaction.response.send_message(f"{member.mention} doesn't seem to be verified on VeriBlox.")
+            return await interaction.response.send_message(f"{member.mention} doesn't look like to be verified on VeriBlox.")
 
         if not interaction.guild:
-            embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**")
+            embed = discord.Embed(description="**⚠️ | You can't run this command on DMs!**", color=0x2F3136)
             return await interaction.response.send_message(embed=embed)
         
         if viewtype == "bustshot":
@@ -126,22 +129,22 @@ class commands(commands.Cog):
 
         uid = data[1]
         if imageres == 0:
-            embed = discord.Embed(title=f"{member}'s Roblox Avatar (150 x 150)")
+            embed = discord.Embed(title=f"{member}'s Roblox Avatar (150 x 150)", color=0x2F3136)
         if imageres == 1:
-            embed = discord.Embed(title=f"{member}'s Roblox Avatar (180 x 180)")
+            embed = discord.Embed(title=f"{member}'s Roblox Avatar (180 x 180)", color=0x2F3136)
         if imageres == 2:
-            embed = discord.Embed(title=f"{member}'s Roblox Avatar (352 x 352)")
+            embed = discord.Embed(title=f"{member}'s Roblox Avatar (352 x 352)", color=0x2F3136)
         if imageres == 3:
-            embed = discord.Embed(title=f"{member}'s Roblox Avatar (420 x 420)")
+            embed = discord.Embed(title=f"{member}'s Roblox Avatar (420 x 420)", color=0x2F3136)
         if imageres == 4:
-            embed = discord.Embed(title=f"{member}'s Roblox Avatar (720 x 720)")
+            embed = discord.Embed(title=f"{member}'s Roblox Avatar (720 x 720)", color=0x2F3136)
 
         embed.set_image(url=getAvatar(type=viewtype, userid=int(uid), size=imageres))
 
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name="taxcalc", description="Calculates how many Robux you need to cover Roblox Tax")
-    @app_commands.describe(amount="Amount of Robux to add Tax", ingame="Whenever the purchase is made inside a Roblox Game")
+    @app_commands.command(name="taxcalc", description="Calculates Robux you need to get an Exact Price for an Item")
+    @app_commands.describe(amount="Amount of Robux your Item Sells from", ingame="Adds In-Game Tax when the transaction is made inside a Roblox Game")
     @app_commands.choices(ingame=[app_commands.Choice(name='False', value="False"), app_commands.Choice(name='True', value="True")])
     async def taxcalc(self, interaction: discord.Interaction, amount: int, ingame: str = "False"):
         embed = discord.Embed(title="Robux Tax Calculator", color=0x2F3136)
@@ -151,12 +154,12 @@ class commands(commands.Cog):
         if ingame == "True":
             tax = 40 / 100
             earnings = 60 / 100
-            embed.set_footer(text="This is In-Game Purchase Tax!")
+            embed.set_footer(text="This tax is In-Game tax.")
 
         embed.description = f"You will need **{amount + round(amount / earnings * tax):,} R$** to get **{amount:,} R$**.\nYou get **{round(amount * earnings):,} R$** without adding tax."
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name="invite", description="Gives the Invite Link for VeriBlox")
+    @app_commands.command(name="invite", description="VeriBlox Invite")
     async def invite(self, interaction : discord.Interaction):
         view = ui.View()
         
@@ -164,14 +167,14 @@ class commands(commands.Cog):
         vb_support = ui.Button(label="VeriBlox Support Server", style=discord.ButtonStyle.url, url="https://discord.gg/EHNtECJRKA")
         vb_topgg   = ui.Button(label="VeriBlox Top.gg", style=discord.ButtonStyle.url, url="https://top.gg/bot/872081372162973736")
 
-        embed = discord.Embed(title="VeriBlox Invite", description="Click the **Invite VeriBlox** button below to invite VeriBlox to your server!\n\nIf you want to support the development of **VeriBlox**, visit Veriblox's Top.gg page below by clicking the **VeriBlox Top.gg** button and vote!")
+        embed = discord.Embed(title="VeriBlox Invite", description="Click the **Invite VeriBlox** button below to invite VeriBlox to your server!\n\nIf you want to support the development of **VeriBlox**, visit Veriblox's Top.gg page below by clicking the **VeriBlox Top.gg** button and vote!", color=0x2F3136)
         embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/872738889272537118/988339351807197254/dendy3.png")
         view.add_item(vb_invite)
         view.add_item(vb_support)
         view.add_item(vb_topgg)
         await interaction.response.send_message(embed=embed, view=view)
 
-    @app_commands.command(name="data", description="Shows a Preview of your current VeriBlox Data")
+    @app_commands.command(name="data", description="Displays a Preview of your VeriBlox Data")
     async def deletedata(self, interaction : discord.Interaction):
         data = getUserData(interaction.user.id)
 
@@ -179,7 +182,6 @@ class commands(commands.Cog):
             return await interaction.response.send_message("You need your Roblox Account to be Verified on VeriBlox before you can use this Command!", ephemeral=True)
 
         view = ui.View(timeout=60)
-
         delete = ui.Button(label="Delete Data (No Confirmation)", style=discord.ButtonStyle.red)
 
         async def confirm(interaction: discord.Interaction):
@@ -202,9 +204,8 @@ class commands(commands.Cog):
         rid = data[1]
         vcode = data[2]
         verified = data[3]
-        exp = data[4]
 
-        embed = discord.Embed(title="VeriBlox Data Preview", description=f"**Stored Data**\n```\n > Discord ID: {interaction.user.id}\n --> Roblox ID: {rid}\n --> VeriBlox Verification Code: {vcode}\n --> Verified (on VeriBlox): {verified}\n --> Data Expiration (Days): {exp}\n```")
+        embed = discord.Embed(title="VeriBlox Data Preview", description=f"**Stored Data**\n```\n > Discord ID: {interaction.user.id}\n --> Roblox ID: {rid}\n --> VeriBlox Verification Code: {vcode}\n --> Verified (on VeriBlox): {verified}\n```", color=0x2F3136)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 class search(GroupCog, name="search"):
@@ -349,8 +350,8 @@ class search(GroupCog, name="search"):
    #    await interaction.followup.send(embed=embed, view=view)
 
 class devex(GroupCog, name="devex"):
-    @app_commands.command(name="robux", description="Converts Robux to a Certain Type of Currency")
-    @app_commands.describe(amount="Amount of Robux to Convert", currency="Type of Currency you want to convert")
+    @app_commands.command(name="robux", description="Converts Robux to a Real-Life Currency")
+    @app_commands.describe(amount="Amount of Robux you want to convert", currency="Type of Currency you want to convert")
     @app_commands.choices(currency=[
         app_commands.Choice(name="US Dollar", value="USD"),
         app_commands.Choice(name="Japanese Yen", value="YEN"),
@@ -378,8 +379,8 @@ class devex(GroupCog, name="devex"):
 
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.command(name="currency", description="Converts USD to Robux")
-    @app_commands.describe(amount="Amount of USD to Convert")
+    @app_commands.command(name="currency", description="Converts US Dollars to Robux")
+    @app_commands.describe(amount="The amount of US Dollars to Convert to Robux")
     async def devex_currency(self, interaction: discord.Interaction, amount: int):
         robuxAmount = round(amount * 285.7143, 2)
         embed = discord.Embed(title="Roblox DevEx", color=0x2F3136)

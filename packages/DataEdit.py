@@ -8,7 +8,7 @@ def addUserData(userid: int):
     data = sqlite3.connect(r"data/data.db")
     cursor = data.cursor()
     
-    cursor.execute(f'INSERT INTO users VALUES ({userid}, 0, "", "False", 60)')
+    cursor.execute(f'INSERT INTO users VALUES ({userid}, 0, "", "False")')
     
     data.commit()
     data.close()
@@ -18,7 +18,7 @@ def addGuildData(guildid: int):
     data = sqlite3.connect(r"data/data.db")
     cursor = data.cursor()
     
-    cursor.execute(f'INSERT INTO guilds VALUES ({guildid}, 0, "", "0", 0, 0, 1, 0, 0)')
+    cursor.execute(f'INSERT INTO guilds VALUES ({guildid}, 0, "", "0", 0, 0, 1, 0, 0, "<robloxUsername> - <robloxDisplay>", 0)')
     
     data.commit()
     data.close()
@@ -63,6 +63,16 @@ def deleteGuildData(guildid: int):
     data.commit()
     data.close()
     log(f"DataEdit: Deleted Guild Data for ID: {guildid}")
+
+def deleteDuplicateData():
+    data = sqlite3.connect(r"data/data.db")
+    cursor = data.cursor()
+
+    cursor.executescript("DELETE FROM users WHERE rowid NOT IN (SELECT min(rowid) FROM users GROUP BY UserID)")
+    cursor.executescript("DELETE FROM guilds WHERE rowid NOT IN (SELECT min(rowid) FROM guilds GROUP BY GuildID)")
+    data.commit()
+    data.close()
+    log(f"DataEdit: Deleted Duplicate User and Guild Data from Database.")
 
 # Get Data
 def getUserData(userid: int):
